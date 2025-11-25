@@ -31,9 +31,13 @@ Modular system design for expandability
 Category	Technology
 
 Frontend	Node.js, CSS, JavaScript
+
 Backend	React.js
+
 Database	MondoDB
+
 Version Control	Git & GitHub
+
 
 
 
