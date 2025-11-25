@@ -28,15 +28,15 @@ Modular system design for expandability
 
 ⚙️ Technology Stack
 
-Category	Technology
+Category	Technology:
 
-Frontend	Node.js, CSS, JavaScript
+Frontend:	Node.js, CSS, JavaScript
 
-Backend	React.js
+Backend:	React.js
 
-Database	MondoDB
+Database:	MondoDB
 
-Version Control	Git & GitHub
+Version Control:	Git & GitHub
 
 
 
