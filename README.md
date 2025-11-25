@@ -37,11 +37,10 @@ Version Control	Git & GitHub
 
 
 
-| S.No | Member                   | Responsibilities                                                                        |
+## 👥 Members' Contribution
 
-
-|    1 | Shristi Singh Astha      | Core payroll logic, backend data flow, salary calculations                              |
-
-|    2 | Sai Prasanth             | Development of Admin dashboard, employee management, payroll control interface          |
-
-|    3 | Anchal Kumari            | Employee user interface, accessing payslips, profile management, employee-side features |
+| S.No | Member Name              | Area of Work / Responsibility  | Contribution Details |
+|-----:|--------------------------|--------------------------------|----------------------|
+| 1    | Shristi Singh Astha      | Access Control                 | Designed and implemented user authentication and role-based access system for secure login and user management. |
+| 2    | Sai Prasanth             | Admin Dashboard                | Developed the Admin Dashboard including employee management, payroll control workflows, and administrative functionalities. |
+| 3    | Anchal Kumari Malik      | Employee Portal                | Built the employee-facing portal with salary viewing, profile updates, and other self-service features. |
