@@ -1,8 +1,3 @@
-/**
- * PayrollPro Backend Server
- * Main entry point for the application
- */
-
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
