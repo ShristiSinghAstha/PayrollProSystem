@@ -13,10 +13,10 @@ const getAuditMetadata = (req) => ({
     requestUrl: req.originalUrl
 });
 
-const getPerformedBy = () => ({
-    userId: null,
-    userName: 'ADMIN',
-    userRole: 'admin'
+const getPerformedBy = (req) => ({
+    userId: req.user._id,
+    userName: `${req.user.personalInfo.firstName} ${req.user.personalInfo.lastName}`,
+    userRole: req.user.role
 });
 
 export const createEmployee = asyncHandler(async (req, res) => {
@@ -40,7 +40,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
 
     await logEmployeeCreation(
         employee,
-        getPerformedBy(),
+        getPerformedBy(req),
         getAuditMetadata(req)
     );
 
@@ -132,7 +132,7 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     await logEmployeeUpdate(
         oldEmployee,
         updatedEmployee,
-        getPerformedBy(),
+        getPerformedBy(req),
         getAuditMetadata(req)
     );
 
@@ -159,7 +159,7 @@ export const deactivateEmployee = asyncHandler(async (req, res) => {
 
     await logEmployeeDelete(
         employee,
-        getPerformedBy(),
+        getPerformedBy(req),
         getAuditMetadata(req)
     );
 

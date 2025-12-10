@@ -1,12 +1,5 @@
-/**
- * Validation Middleware
- * Uses express-validator for request validation
- */
 import { body, param, query, validationResult } from 'express-validator';
 
-/**
- * Validate request and return errors if any
- */
 const validate = (req, res, next) => {
     const errors = validationResult(req);
 
@@ -27,11 +20,7 @@ const validate = (req, res, next) => {
     next();
 };
 
-/**
- * Employee validation rules
- */
 export const employeeValidation = {
-    // Validation for creating employee
     create: [
         body('personalInfo.firstName')
             .trim()
@@ -121,7 +110,6 @@ export const employeeValidation = {
         validate
     ],
 
-    // Validation for updating employee
     update: [
         param('id')
             .isMongoId().withMessage('Invalid employee ID'),
@@ -144,7 +132,6 @@ export const employeeValidation = {
         validate
     ],
 
-    // Validation for getting employee by ID
     getById: [
         param('id')
             .isMongoId().withMessage('Invalid employee ID'),
@@ -152,15 +139,11 @@ export const employeeValidation = {
     ]
 };
 
-/**
- * Payroll validation rules
- */
 export const payrollValidation = {
-    // Validation for processing payroll
     process: [
         body('month')
             .notEmpty().withMessage('Month is required')
-            .matches(/^\d{4}-(0[1-9]|1[0-2])$/).withMessage('Month must be in YYYY-MM format'),
+            .isInt({ min: 1, max: 12 }).withMessage('Month must be between 1 and 12'),
 
         body('year')
             .notEmpty().withMessage('Year is required')
@@ -169,35 +152,33 @@ export const payrollValidation = {
         validate
     ],
 
-    // Validation for adding adjustment
     adjustment: [
         param('id')
             .isMongoId().withMessage('Invalid payroll ID'),
 
-        body('bonus')
+        body('type')
             .optional()
-            .isFloat({ min: 0 }).withMessage('Bonus must be a positive number'),
+            .isIn(['Bonus', 'Penalty', 'Allowance', 'Deduction', 'Reimbursement', 'Recovery'])
+            .withMessage('Invalid adjustment type'),
 
-        body('penalty')
-            .optional()
-            .isFloat({ min: 0 }).withMessage('Penalty must be a positive number'),
+        body('amount')
+            .notEmpty().withMessage('Amount is required')
+            .isFloat({ min: 0.01 }).withMessage('Amount must be positive'),
 
         body('description')
-            .optional()
+            .notEmpty().withMessage('Description is required')
             .trim()
-            .isLength({ max: 500 }).withMessage('Description cannot exceed 500 characters'),
+            .isLength({ min: 5, max: 200 }).withMessage('Description must be 5-200 characters'),
 
         validate
     ],
 
-    // Validation for getting payroll by ID
     getById: [
         param('id')
             .isMongoId().withMessage('Invalid payroll ID'),
         validate
     ],
 
-    // Validation for getting payroll by month
     getByMonth: [
         query('month')
             .notEmpty().withMessage('Month is required')
@@ -211,5 +192,4 @@ export const payrollValidation = {
     ]
 };
 
-// Export validate function separately if needed elsewhere
 export { validate };

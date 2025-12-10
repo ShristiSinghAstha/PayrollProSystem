@@ -11,8 +11,12 @@ import {
     getPayrollStats
 } from '../controllers/payrollController.js';
 import { payrollValidation } from '../middlewares/validator.js';
+import { protect, restrictTo } from '../middlewares/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(restrictTo('admin'));
 
 router.get('/stats', getPayrollStats);
 router.post('/process', payrollValidation.process, processMonthlyPayroll);

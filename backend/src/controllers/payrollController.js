@@ -11,16 +11,20 @@ const getAuditMetadata = (req) => ({
     requestUrl: req.originalUrl
 });
 
-const getPerformedBy = () => ({
-    userId: null,
-    userName: 'ADMIN',
-    userRole: 'admin'
+const getPerformedBy = (req) => ({
+    userId: req.user._id,
+    userName: `${req.user.personalInfo.firstName} ${req.user.personalInfo.lastName}`,
+    userRole: req.user.role
 });
 
 export const processMonthlyPayroll = asyncHandler(async (req, res) => {
     const { month, year } = req.body;
 
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+    const monthNum = parseInt(month);
+    if (monthNum < 1 || monthNum > 12) {
+        throw new AppError('Month must be between 1 and 12', 400);
+    }
 
     const existingPayroll = await Payroll.findOne({ month: monthStr });
     if (existingPayroll) {
@@ -51,7 +55,7 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
                 processedAt: new Date()
             });
 
-            await logPayrollProcess(payroll._id, getPerformedBy(), getAuditMetadata(req));
+            await logPayrollProcess(payroll._id, getPerformedBy(req), getAuditMetadata(req));
 
             payrollRecords.push(payroll);
 
@@ -198,7 +202,7 @@ export const approvePayroll = asyncHandler(async (req, res) => {
     payroll.approve(null);
     await payroll.save();
 
-    await logPayrollApproval(payroll, getPerformedBy(), getAuditMetadata(req));
+    await logPayrollApproval(payroll, getPerformedBy(req), getAuditMetadata(req));
 
     res.status(200).json({
         success: true,

@@ -8,11 +8,14 @@ import {
     getEmployeeStats
 } from '../controllers/employeeController.js';
 import { employeeValidation } from '../middlewares/validator.js';
+import { protect, restrictTo } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.get('/stats', getEmployeeStats);
+router.use(protect);
+router.use(restrictTo('admin'));
 
+router.get('/stats', getEmployeeStats);
 router.post('/', employeeValidation.create, createEmployee);
 router.get('/', getAllEmployees);
 router.get('/:id', employeeValidation.getById, getEmployeeById);
