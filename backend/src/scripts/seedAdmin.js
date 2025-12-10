@@ -9,7 +9,7 @@ const seedAdmin = async () => {
         console.log('✅ Connected to MongoDB');
 
         const existingAdmin = await Employee.findOne({ role: 'admin' });
-
+``
         if (existingAdmin) {
             console.log('⚠️  Admin already exists:');
             console.log(`   Email: ${existingAdmin.personalInfo.email}`);
@@ -17,7 +17,11 @@ const seedAdmin = async () => {
             process.exit(0);
         }
 
+        const year = new Date().getFullYear();
+        const employeeId = `HR-${year}-1001`;
+
         const admin = await Employee.create({
+            employeeId,
             personalInfo: {
                 firstName: 'Admin',
                 lastName: 'User',

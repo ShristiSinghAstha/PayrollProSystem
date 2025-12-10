@@ -176,7 +176,6 @@ auditLogSchema.pre('save', function(next) {
       this.severity = 'MEDIUM';
     }
   }
-  next();
 });
 
 auditLogSchema.methods.getDetailedChanges = function() {

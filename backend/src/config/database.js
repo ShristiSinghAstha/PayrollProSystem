@@ -1,7 +1,3 @@
-/**
- * Database Configuration
- * Handles MongoDB connection with Mongoose
- */
 import mongoose from 'mongoose';
 
 const connectDB = async () => {

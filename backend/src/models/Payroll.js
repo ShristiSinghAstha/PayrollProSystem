@@ -217,7 +217,6 @@ payrollSchema.pre('save', function(next) {
   } else {
     this.totalAdjustment = 0;
   }
-  next();
 });
 
 payrollSchema.methods.addAdjustment = function(type, amount, description, addedBy) {

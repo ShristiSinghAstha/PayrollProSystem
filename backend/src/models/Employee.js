@@ -5,7 +5,6 @@ const employeeSchema = new mongoose.Schema({
   employeeId: { 
     type: String, 
     unique: true,
-    required: true,
     uppercase: true,
     trim: true,
     index: true
@@ -225,7 +224,7 @@ employeeSchema.virtual('personalInfo.age').get(function() {
   return Math.floor((Date.now() - this.personalInfo.dateOfBirth) / (365.25 * 24 * 60 * 60 * 1000));
 });
 
-employeeSchema.pre('save', async function(next) {
+employeeSchema.pre('save', async function() {
   if (this.isNew && !this.employeeId) {
     const year = new Date().getFullYear();
     const deptCode = this.employment.department.substring(0, 3).toUpperCase();
@@ -244,15 +243,13 @@ employeeSchema.pre('save', async function(next) {
     
     this.employeeId = `${deptCode}-${year}-${sequence}`;
   }
-  next();
 });
 
-employeeSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+employeeSchema.pre('save', async function() {
+  if (!this.isModified('password')) return;
   
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 employeeSchema.methods.comparePassword = async function(candidatePassword) {
