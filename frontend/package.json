@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@tailwindcss/vite": "^4.1.17",
+    "tailwindcss": "3.4.13",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -24,6 +24,9 @@
     "recharts": "^3.5.1",
     "zod": "^4.1.13"
   },
+  "overrides": {
+    "tailwindcss": "3.4.13"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",
@@ -35,7 +38,6 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17",
     "vite": "^7.2.4"
   }
 }

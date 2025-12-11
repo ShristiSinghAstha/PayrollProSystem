@@ -12,6 +12,8 @@ import PayrollDetail from '@/pages/admin/PayrollDetail';
 import EmployeeDashboard from '@/pages/employee/Dashboard';
 import Payslips from '@/pages/employee/Payslips';
 import Notifications from '@/pages/employee/Notifications';
+import Reports from '@/pages/admin/Reports';
+import Profile from '@/pages/employee/Profile';
 
 // Layouts
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -49,6 +51,7 @@ const AppRoutes = () => {
         <Route path="employees/:id" element={<EmployeeForm />} />
         <Route path="payroll" element={<PayrollList />} />
         <Route path="payroll/:month" element={<PayrollDetail />} />
+        <Route path="reports" element={<Reports />} />
       </Route>
 
       {/* Employee Routes */}
@@ -63,6 +66,7 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<EmployeeDashboard />} />
         <Route path="payslips" element={<Payslips />} />
         <Route path="notifications" element={<Notifications />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
 
       {/* Root redirect */}
