@@ -6,6 +6,8 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
+import payslipRoutes from './routes/payslipRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const app = express();
 
@@ -31,7 +33,9 @@ app.get('/', (req, res) => {
         modules: {
             authentication: 'Active',
             employeeManagement: 'Active',
-            payrollProcessing: 'Active'
+            payrollProcessing: 'Active',
+            payslipGeneration: 'Active',      
+            notifications: 'Active'          
         }
     });
 });
@@ -39,6 +43,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/payslips', payslipRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

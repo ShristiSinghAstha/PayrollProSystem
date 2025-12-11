@@ -3,6 +3,10 @@ import Employee from '../models/Employee.js';
 import { asyncHandler, AppError } from '../middlewares/errorHandler.js';
 import { calculateSalary } from '../utils/salaryCalculator.js';
 import { logPayrollProcess, logPayrollApproval } from '../utils/auditLogger.js';
+import { generatePayslipPDF, uploadPDFToCloudinary } from '../utils/pdfGenerator.js';
+import { sendPayslipEmail } from '../utils/emailService.js';
+import { createPayslipNotification } from '../utils/notificationService.js';
+
 
 const getAuditMetadata = (req) => ({
     ipAddress: req.ip,
@@ -309,5 +313,90 @@ export const getPayrollStats = asyncHandler(async (req, res) => {
             byStatus: stats,
             byMonth: monthlyStats
         }
+    });
+});
+
+export const bulkPayAndGeneratePayslips = asyncHandler(async (req, res) => {
+    const { month } = req.params;
+
+    const approvedPayrolls = await Payroll.find({ 
+        month, 
+        status: 'Approved' 
+    }).populate('employeeId');
+
+    if (approvedPayrolls.length === 0) {
+        throw new AppError('No approved payrolls found for this month', 404);
+    }
+
+    const results = {
+        totalProcessed: approvedPayrolls.length,
+        successful: 0,
+        failed: 0,
+        details: []
+    };
+
+    for (const payroll of approvedPayrolls) {
+        const employee = payroll.employeeId;
+        
+        try {
+            const transactionId = `TXN-${Date.now()}-${employee.employeeId}`;
+            payroll.markAsPaid(transactionId);
+            await payroll.save();
+
+            const pdfBuffer = await generatePayslipPDF(payroll, employee);
+            const filename = `${employee.employeeId}-${month}`;
+            const payslipUrl = await uploadPDFToCloudinary(pdfBuffer, filename);
+
+            payroll.payslipUrl = payslipUrl;
+            payroll.payslipGenerated = true;
+            payroll.payslipGeneratedAt = new Date();
+            await payroll.save();
+
+            const emailResult = await sendPayslipEmail(
+                employee.personalInfo.email,
+                `${employee.personalInfo.firstName} ${employee.personalInfo.lastName}`,
+                payslipUrl,
+                payroll
+            );
+
+            if (emailResult.success) {
+                payroll.notificationSent = true;
+                payroll.notificationSentAt = new Date();
+                await payroll.save();
+            }
+
+            await createPayslipNotification(
+                employee._id,
+                payslipUrl,
+                month,
+                payroll.netSalary
+            );
+
+            await logPayrollApproval(payroll, getPerformedBy(req), getAuditMetadata(req));
+
+            results.successful++;
+            results.details.push({
+                employeeId: employee.employeeId,
+                name: `${employee.personalInfo.firstName} ${employee.personalInfo.lastName}`,
+                status: 'success',
+                payslipUrl,
+                emailSent: emailResult.success
+            });
+
+        } catch (error) {
+            results.failed++;
+            results.details.push({
+                employeeId: employee.employeeId,
+                name: `${employee.personalInfo.firstName} ${employee.personalInfo.lastName}`,
+                status: 'failed',
+                error: error.message
+            });
+        }
+    }
+
+    res.status(200).json({
+        success: true,
+        message: `Bulk payment completed: ${results.successful} successful, ${results.failed} failed`,
+        data: results
     });
 });
