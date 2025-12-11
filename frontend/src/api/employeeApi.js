@@ -23,3 +23,7 @@ export const deactivateEmployee = (id) => {
 export const getEmployeeStats = () => {
   return axios.get('/api/employees/stats');
 };
+
+export const getEmployeeDashboard = () => {
+  return axios.get('/api/employees/dashboard');
+};

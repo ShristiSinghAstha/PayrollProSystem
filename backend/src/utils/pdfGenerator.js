@@ -14,6 +14,27 @@ const formatDate = (date) => {
 };
 
 export const generatePayslipPDF = async (payrollData, employeeData) => {
+  // Validate required data
+  if (!payrollData || !employeeData) {
+    throw new Error('Payroll and employee data are required');
+  }
+
+  if (!employeeData.personalInfo) {
+    throw new Error('Employee personal information is missing');
+  }
+
+  if (!employeeData.employment) {
+    throw new Error('Employee employment information is missing');
+  }
+
+  if (!employeeData.bankDetails) {
+    throw new Error('Employee bank details are missing');
+  }
+
+  if (!payrollData.earnings || !payrollData.deductions) {
+    throw new Error('Payroll earnings or deductions are missing');
+  }
+
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -26,15 +47,18 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
       const { personalInfo, employment, bankDetails, employeeId } = employeeData;
       const { month, earnings, deductions, adjustments, netSalary, transactionId, paidAt } = payrollData;
 
+      // Header
       doc.fontSize(20).font('Helvetica-Bold').text('PAYSLIP', { align: 'center' });
       doc.moveDown(0.5);
       doc.fontSize(10).font('Helvetica').text('PayrollPro Management System', { align: 'center' });
       doc.moveDown(2);
 
+      // Pay Period
       doc.fontSize(12).font('Helvetica-Bold').text(`Pay Period: ${month}`);
       doc.fontSize(10).font('Helvetica').text(`Generated: ${formatDate(new Date())}`);
       doc.moveDown(1);
 
+      // Employee Details
       doc.fontSize(11).font('Helvetica-Bold').text('Employee Details', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10).font('Helvetica');
@@ -44,6 +68,7 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
       doc.text(`Designation: ${employment.designation}`);
       doc.moveDown(1);
 
+      // Earnings Section
       doc.fontSize(11).font('Helvetica-Bold').text('Earnings', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10).font('Helvetica');
@@ -66,7 +91,13 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
         doc.text(formatCurrency(earnings.otherAllowances), 450, doc.y - 12, { align: 'right' });
       }
 
+      // Adjustments Section
       if (adjustments && adjustments.length > 0) {
+        doc.moveDown(0.5);
+        doc.fontSize(11).font('Helvetica-Bold').text('Adjustments', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica');
+
         adjustments.forEach(adj => {
           const isPositive = ['Bonus', 'Allowance', 'Reimbursement'].includes(adj.type);
           doc.text(`${adj.type}: ${adj.description}`, 50);
@@ -89,6 +120,7 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
       doc.text(formatCurrency(earnings.gross), 450, doc.y - 12, { align: 'right' });
       doc.moveDown(1);
 
+      // Deductions Section
       doc.fontSize(11).font('Helvetica-Bold').text('Deductions', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10).font('Helvetica');
@@ -116,6 +148,7 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
       doc.text(formatCurrency(deductions.total), 450, doc.y - 12, { align: 'right' });
       doc.moveDown(1);
 
+      // Net Salary
       doc.strokeColor('#000000').lineWidth(2);
       doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
       doc.moveDown(0.5);
@@ -125,14 +158,16 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
       doc.text(formatCurrency(netSalary), 450, doc.y - 15, { align: 'right' });
       doc.moveDown(2);
 
+      // Payment Details
       doc.fontSize(11).font('Helvetica-Bold').text('Payment Details', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10).font('Helvetica');
-      doc.text(`Transaction ID: ${transactionId}`);
-      doc.text(`Payment Date: ${formatDate(paidAt)}`);
+      doc.text(`Transaction ID: ${transactionId || 'N/A'}`);
+      doc.text(`Payment Date: ${paidAt ? formatDate(paidAt) : 'Pending'}`);
       doc.text(`Bank Account: ${bankDetails.accountHolderName} - ****${bankDetails.accountNumber.slice(-4)}`);
       doc.moveDown(2);
 
+      // Footer
       doc.fontSize(8).font('Helvetica-Oblique').fillColor('#666666');
       doc.text('This is a computer-generated payslip and does not require a signature.', { align: 'center' });
       doc.text('For any queries, please contact HR department.', { align: 'center' });
@@ -140,12 +175,20 @@ export const generatePayslipPDF = async (payrollData, employeeData) => {
       doc.end();
 
     } catch (error) {
-      reject(error);
+      reject(new Error(`PDF generation failed: ${error.message}`));
     }
   });
 };
 
 export const uploadPDFToCloudinary = async (pdfBuffer, filename) => {
+  if (!pdfBuffer || pdfBuffer.length === 0) {
+    throw new Error('PDF buffer is empty');
+  }
+
+  if (!filename) {
+    throw new Error('Filename is required');
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -155,7 +198,12 @@ export const uploadPDFToCloudinary = async (pdfBuffer, filename) => {
         format: 'pdf'
       },
       (error, result) => {
-        if (error) return reject(error);
+        if (error) {
+          return reject(new Error(`Cloudinary upload failed: ${error.message}`));
+        }
+        if (!result || !result.secure_url) {
+          return reject(new Error('Cloudinary upload succeeded but no URL returned'));
+        }
         resolve(result.secure_url);
       }
     );

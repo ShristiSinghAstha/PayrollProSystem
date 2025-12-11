@@ -52,7 +52,7 @@ const AdminDashboard = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Active Employees" value={employeeStats?.activeEmployees ?? 0} />
+            <StatCard label="Active Employees" value={employeeStats?.active ?? 0} />
             <StatCard
               label="Pending Payrolls"
               value={payrollStats?.pending ?? 0}
@@ -80,21 +80,23 @@ const AdminDashboard = () => {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {payrollStats?.pending
-                      ? 'Payroll awaiting approval'
+                      ? `${payrollStats.pending} payrolls awaiting approval`
                       : 'All payrolls approved'}
                   </p>
                   <Link to="/admin/payroll" className="text-sm text-primary-700 hover:underline mt-2 inline-block">
-                    Review payroll
+                    Review payroll →
                   </Link>
                 </div>
                 <div className="p-3 rounded-lg border border-primary-200 bg-primary-50">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900">New hires</p>
+                    <p className="text-sm font-medium text-gray-900">Employee Management</p>
                     <Badge variant="info">Action</Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">Add onboarding details for new employees.</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {employeeStats?.total ?? 0} total employees, {employeeStats?.active ?? 0} active
+                  </p>
                   <Link to="/admin/employees/new" className="text-sm text-primary-700 hover:underline mt-2 inline-block">
-                    Add employee
+                    Add new employee →
                   </Link>
                 </div>
               </div>

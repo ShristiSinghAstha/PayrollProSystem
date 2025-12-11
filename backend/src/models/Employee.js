@@ -209,6 +209,8 @@ const employeeSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+employeeSchema.index({ employeeId: 1 }, { unique: true });
+
 employeeSchema.virtual('personalInfo.fullName').get(function() {
   return `${this.personalInfo.firstName} ${this.personalInfo.lastName}`;
 });

@@ -1,3 +1,5 @@
+// websockets will make this feature more interesting... let's see... will come back !!!
+
 import { useState, useEffect } from 'react';
 import { getMyNotifications, getUnreadCount } from '@/api/notificationApi';
 import toast from 'react-hot-toast';
@@ -57,8 +59,8 @@ export const useUnreadCount = () => {
   useEffect(() => {
     fetchCount();
     
-    // Poll every 30 seconds
-    const interval = setInterval(fetchCount, 30000);
+    // Poll every 30 seconds -> let's try websockets later...
+    const interval = setInterval(fetchCount, 30000); 
     
     return () => clearInterval(interval);
   }, []);

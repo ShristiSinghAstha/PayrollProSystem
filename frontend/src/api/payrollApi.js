@@ -39,3 +39,7 @@ export const bulkPayAndGeneratePayslips = (month) => {
 export const getPayrollStats = (params) => {
   return axios.get('/api/payroll/stats', { params });
 };
+
+export const getMonthlyPayrollSummary = () => {
+    return axios.get('/api/payroll/summary');
+}

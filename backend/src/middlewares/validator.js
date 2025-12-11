@@ -143,11 +143,20 @@ export const payrollValidation = {
     process: [
         body('month')
             .notEmpty().withMessage('Month is required')
-            .isInt({ min: 1, max: 12 }).withMessage('Month must be between 1 and 12'),
+            .custom((value) => {
+                // Accept both numeric (12) and "YYYY-MM" (2025-12) formats
+                const numericMonth = /^(0?[1-9]|1[0-2])$/;
+                const dateFormat = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+                if (!numericMonth.test(String(value)) && !dateFormat.test(String(value))) {
+                    throw new Error('Month must be 1-12 or in YYYY-MM format');
+                }
+                return true;
+            }),
 
         body('year')
             .notEmpty().withMessage('Year is required')
-            .isInt({ min: 2020, max: 2100 }).withMessage('Invalid year'),
+            .isInt({ min: 2020, max: 2100 }).withMessage('Year must be between 2020 and 2100'),
 
         validate
     ],
@@ -180,13 +189,9 @@ export const payrollValidation = {
     ],
 
     getByMonth: [
-        query('month')
-            .notEmpty().withMessage('Month is required')
+        param('month')
+            .notEmpty().withMessage('Month parameter is required')
             .matches(/^\d{4}-(0[1-9]|1[0-2])$/).withMessage('Month must be in YYYY-MM format'),
-
-        query('year')
-            .notEmpty().withMessage('Year is required')
-            .isInt({ min: 2020, max: 2100 }).withMessage('Invalid year'),
 
         validate
     ]

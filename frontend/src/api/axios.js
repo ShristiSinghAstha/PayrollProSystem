@@ -1,16 +1,14 @@
 import axios from 'axios';
-import { API_BASE_URL } from '@/utils/constants';
-import toast from 'react-hot-toast';
 
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+const instance = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
-// Request interceptor
-axiosInstance.interceptors.request.use(
+// Request interceptor - Add token to every request
+instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -23,19 +21,17 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor
-axiosInstance.interceptors.response.use(
+// Response interceptor - Handle 401 errors
+instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
       window.location.href = '/login';
-      toast.error('Session expired. Please login again.');
     }
-    
     return Promise.reject(error);
   }
 );
 
-export default axiosInstance;
+export default instance;

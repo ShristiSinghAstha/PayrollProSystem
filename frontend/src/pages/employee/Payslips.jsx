@@ -14,7 +14,7 @@ const Payslips = () => {
   const handleDownload = async (payslip) => {
     try {
       const response = await downloadPayslip(payslip._id);
-      const url = response.data?.data?.url || response.data?.url;
+      const url = response.data?.data?.payslipUrl || response.data?.data?.url || response.data?.url;
       if (url) {
         window.open(url, '_blank');
         toast.success('Payslip downloaded');
