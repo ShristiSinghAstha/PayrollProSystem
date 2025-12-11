@@ -206,3 +206,39 @@ export const getEmployeeStats = asyncHandler(async (req, res) => {
         }
     });
 });
+
+//Dashboard - Module 5 - Status
+export const getEmployeeDashboard = asyncHandler(async (req, res) => {
+    const employeeId = req.user._id;
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2024-12"
+
+    // Get current month payroll
+    const currentPayroll = await Payroll.findOne({
+        employeeId,
+        month: currentMonth
+    }).select('month status netSalary paidAt payslipGenerated payslipUrl');
+
+    // Get recent payslips (last 3)
+    const recentPayslips = await Payroll.find({
+        employeeId,
+        status: 'Paid'
+    })
+    .select('month netSalary paidAt')
+    .sort({ year: -1, month: -1 })
+    .limit(3);
+
+    // Get unread notifications count
+    const unreadCount = await Notification.countDocuments({
+        employeeId,
+        read: false
+    });
+
+    res.status(200).json({
+        success: true,
+        data: {
+            currentMonthPayroll,
+            recentPayslips,
+            unreadNotifications: unreadCount
+        }
+    });
+});
