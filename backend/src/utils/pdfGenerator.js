@@ -189,21 +189,28 @@ export const uploadPDFToCloudinary = async (pdfBuffer, filename) => {
     throw new Error('Filename is required');
   }
 
+  // Remove .pdf extension - not needed for image resource type
+  const cleanFilename = filename.replace(/\.pdf$/i, '');
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        resource_type: 'raw',
+        resource_type: 'image',  // ✅ Changed from 'raw' to 'image'
         folder: 'payslips',
-        public_id: filename,
-        format: 'pdf'
+        public_id: cleanFilename,  // ✅ No .pdf extension
+        access_mode: 'public',
+        format: 'pdf'  // ✅ Explicitly set PDF format
       },
       (error, result) => {
         if (error) {
+          console.error('Cloudinary upload error:', error);
           return reject(new Error(`Cloudinary upload failed: ${error.message}`));
         }
         if (!result || !result.secure_url) {
           return reject(new Error('Cloudinary upload succeeded but no URL returned'));
         }
+        
+        console.log('✅ PDF uploaded to:', result.secure_url);
         resolve(result.secure_url);
       }
     );
