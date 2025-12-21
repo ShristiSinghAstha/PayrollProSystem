@@ -63,7 +63,12 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
 
     for (const employee of employeesToProcess) {
         try {
-            const salaryBreakdown = calculateSalary(employee.salaryStructure);
+            // Get LOP days for this month from Leave model
+            const Leave = (await import('../models/Leave.js')).default;
+            const lopDays = await Leave.getLOPDaysForMonth(employee._id, year, month);
+
+            // Calculate salary with LOP deduction
+            const salaryBreakdown = calculateSalary(employee.salaryStructure, { lopDays });
 
             const payroll = await Payroll.create({
                 employeeId: employee._id,
@@ -73,7 +78,13 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
                 deductions: salaryBreakdown.deductions,
                 netSalary: salaryBreakdown.netSalary,
                 status: 'Pending',
-                processedAt: new Date()
+                processedAt: new Date(),
+                adjustments: lopDays > 0 ? [{
+                    type: 'LOP',
+                    amount: salaryBreakdown.deductions.lop,
+                    reason: `${lopDays} day(s) Leave without Pay`,
+                    appliedBy: 'SYSTEM'
+                }] : []
             });
 
             await logPayrollProcess(payroll._id, getPerformedBy(req), getAuditMetadata(req));

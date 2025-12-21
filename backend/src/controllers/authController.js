@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import Employee from '../models/Employee.js';
 import { asyncHandler, AppError } from '../middlewares/errorHandler.js';
+import { sendPasswordResetEmail } from '../utils/emailService.js';
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -130,5 +132,104 @@ export const updateProfile = asyncHandler(async (req, res) => {
         success: true,
         message: 'Profile updated successfully',
         data: user.getPublicProfile()
+    });
+});
+
+// Forgot Password - Send reset email
+export const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new AppError('Please provide your email address', 400);
+    }
+
+    const user = await Employee.findOne({ 'personalInfo.email': email });
+
+    if (!user) {
+        // Don't reveal if user exists for security
+        return res.status(200).json({
+            success: true,
+            message: 'If an account with that email exists, a password reset link has been sent'
+        });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Hash token and save to database
+    const hashedToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = Date.now() + 3600000; // 1 hour
+
+    await user.save({ validateBeforeSave: false });
+
+    // Send email with reset link
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    try {
+        await sendPasswordResetEmail(user.personalInfo.email, {
+            name: `${user.personalInfo.firstName} ${user.personalInfo.lastName}`,
+            resetUrl
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset link sent to your email'
+        });
+    } catch (error) {
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        throw new AppError('Error sending email. Please try again later', 500);
+    }
+});
+
+// Reset Password with token
+export const resetPassword = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+        throw new AppError('Please provide a new password', 400);
+    }
+
+    if (password.length < 6) {
+        throw new AppError('Password must be at least 6 characters', 400);
+    }
+
+    // Hash the token from URL
+    const hashedToken = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
+
+    // Find user with valid token
+    const user = await Employee.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new AppError('Invalid or expired reset token', 400);
+    }
+
+    // Update password
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    // Generate new JWT token
+    const jwtToken = generateToken(user._id);
+
+    res.status(200).json({
+        success: true,
+        message: 'Password reset successfully',
+        token: jwtToken
     });
 });

@@ -7,13 +7,13 @@ const logAction = async (action, entity, entityId, performedBy = {}, changes = {
       return null;
     }
 
-    const validActions = ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'PROCESS', 'PAY'];
+    const validActions = ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'PROCESS', 'PAY', 'LEAVE_APPLIED', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'LEAVE_DELETED'];
     if (!validActions.includes(action)) {
       console.error(`Invalid action type: ${action}`);
       return null;
     }
 
-    const validEntities = ['Employee', 'Payroll', 'User', 'System'];
+    const validEntities = ['Employee', 'Payroll', 'User', 'System', 'Leave'];
     if (!validEntities.includes(entity)) {
       console.error(`Invalid entity type: ${entity}`);
       return null;
@@ -116,12 +116,12 @@ export const logPayrollApproval = async (payroll, performedBy = {}, metadata = {
     'Payroll',
     payroll._id,
     performedBy,
-    { 
-      after: { 
-        status: payroll.status, 
+    {
+      after: {
+        status: payroll.status,
         approvedAt: payroll.approvedAt,
         netSalary: payroll.netSalary
-      } 
+      }
     },
     metadata
   );
@@ -134,7 +134,7 @@ export const getAuditLogs = async (filters = {}, limit = 100) => {
     if (filters.action) query.action = filters.action;
     if (filters.entity) query.entity = filters.entity;
     if (filters.performedBy) query['performedBy.userId'] = filters.performedBy;
-    
+
     if (filters.startDate || filters.endDate) {
       query.timestamp = {};
       if (filters.startDate) query.timestamp.$gte = new Date(filters.startDate);
