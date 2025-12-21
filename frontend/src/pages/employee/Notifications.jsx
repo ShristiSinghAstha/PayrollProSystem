@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import EmptyState from '@/components/common/EmptyState';
+import SkeletonCard from '@/components/common/SkeletonCard';
+import LottieEmptyState from '@/components/common/LottieEmptyState';
 import PageContainer from '@/components/layout/PageContainer';
 import NotificationItem from '@/components/domain/NotificationItem';
 import { useNotifications } from '@/hooks/useNotifications';
 import { markAsRead, markAllAsRead } from '@/api/notificationApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -32,10 +32,10 @@ const Notifications = () => {
   const handleMarkAll = async () => {
     try {
       await markAllAsRead();
-      toast.success('All notifications marked as read');
+      message.success('All notifications marked as read');
       refetch();
     } catch (error) {
-      toast.error('Failed to mark all as read');
+      message.error('Failed to mark all as read');
     }
   };
 
@@ -55,11 +55,18 @@ const Notifications = () => {
 
       <Card>
         {loading ? (
-          <div className="py-10 flex justify-center">
-            <LoadingSpinner />
+          <div>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} style={{ marginBottom: 12 }}>
+                <SkeletonCard rows={2} hasTitle={false} hasAvatar={true} height={16} />
+              </div>
+            ))}
           </div>
         ) : notifications.length === 0 ? (
-          <EmptyState title="No notifications" description="You are all caught up." />
+          <LottieEmptyState
+            title="All Caught Up!"
+            description="You have no new notifications. We'll notify you when something important happens."
+          />
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createEmployee } from '@/api/employeeApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const useCreateEmployee = () => {
   const [loading, setLoading] = useState(false);
@@ -12,12 +12,12 @@ export const useCreateEmployee = () => {
       setError(null);
 
       const response = await createEmployee(payload);
-      toast.success('Employee created successfully');
+      message.success('Employee created successfully');
       return response.data;
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to create employee';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to create employee';
+      setError(errorMsg);
+      message.error(errorMsg);
       throw err;
     } finally {
       setLoading(false);

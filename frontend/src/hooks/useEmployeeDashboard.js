@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getEmployeeDashboard } from '@/api/employeeApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const useEmployeeDashboard = () => {
   const [data, setData] = useState(null);
@@ -11,13 +11,13 @@ export const useEmployeeDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getEmployeeDashboard();
       setData(response.data.data);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch dashboard data';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch dashboard data';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -27,10 +27,10 @@ export const useEmployeeDashboard = () => {
     fetchDashboard();
   }, []);
 
-  return { 
-    data, 
-    loading, 
-    error, 
-    refetch: fetchDashboard 
+  return {
+    data,
+    loading,
+    error,
+    refetch: fetchDashboard
   };
 };

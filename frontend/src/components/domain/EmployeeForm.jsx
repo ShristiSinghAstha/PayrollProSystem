@@ -1,13 +1,40 @@
-import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Card from '@/components/common/Card';
-import Input from '@/components/common/Input';
-import Select from '@/components/common/Select';
-import Button from '@/components/common/Button';
+import {
+    Form,
+    Input,
+    Select,
+    DatePicker,
+    InputNumber,
+    Card,
+    Row,
+    Col,
+    Steps,
+    Button,
+    Divider,
+    Statistic,
+    Space,
+    Typography,
+    message
+} from 'antd';
+import {
+    UserOutlined,
+    BankOutlined,
+    DollarOutlined,
+    SafetyOutlined,
+    ArrowLeftOutlined,
+    ArrowRightOutlined,
+    SaveOutlined
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { DEPARTMENTS } from '@/utils/constants';
 import { formatCurrency } from '@/utils/formatters';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
 
 const schema = z.object({
     personalInfo: z.object({
@@ -15,7 +42,7 @@ const schema = z.object({
         lastName: z.string().min(2, 'Last name is required'),
         email: z.string().email('Valid email required'),
         phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter 10-digit phone'),
-        dateOfBirth: z.string(),
+        dateOfBirth: z.any(),
         address: z.object({
             street: z.string().optional().or(z.literal('')),
             city: z.string().optional().or(z.literal('')),
@@ -27,7 +54,7 @@ const schema = z.object({
     employment: z.object({
         department: z.string().min(1, 'Department required'),
         designation: z.string().min(2, 'Designation required'),
-        dateOfJoining: z.string(),
+        dateOfJoining: z.any(),
         status: z.string().optional(),
     }),
     bankDetails: z.object({
@@ -38,7 +65,7 @@ const schema = z.object({
         branch: z.string().optional().or(z.literal('')),
     }),
     salaryStructure: z.object({
-        basicSalary: z.coerce.number().min(0, 'Basic required'),
+        basicSalary: z.coerce.number().min(5000, 'Minimum ₹5000 required'),
         hra: z.coerce.number().min(0).optional(),
         da: z.coerce.number().min(0).optional(),
         specialAllowance: z.coerce.number().min(0).optional(),
@@ -56,7 +83,7 @@ const defaultFormValues = {
         lastName: '',
         email: '',
         phone: '',
-        dateOfBirth: '',
+        dateOfBirth: null,
         address: {
             street: '',
             city: '',
@@ -68,7 +95,7 @@ const defaultFormValues = {
     employment: {
         department: DEPARTMENTS[0],
         designation: '',
-        dateOfJoining: '',
+        dateOfJoining: null,
         status: 'Active',
     },
     bankDetails: {
@@ -92,22 +119,40 @@ const defaultFormValues = {
 };
 
 const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) => {
+    const [currentStep, setCurrentStep] = useState(0);
+    const isEdit = Boolean(defaultValues?._id);
+
     const {
-        register,
+        control,
         handleSubmit,
         formState: { errors },
         watch,
         reset,
+        trigger,
     } = useForm({
         defaultValues,
         resolver: zodResolver(schema),
     });
 
     useEffect(() => {
-        reset(defaultValues);
+        if (defaultValues) {
+            const formatted = {
+                ...defaultValues,
+                personalInfo: {
+                    ...defaultValues.personalInfo,
+                    dateOfBirth: defaultValues.personalInfo?.dateOfBirth ? dayjs(defaultValues.personalInfo.dateOfBirth) : null,
+                },
+                employment: {
+                    ...defaultValues.employment,
+                    dateOfJoining: defaultValues.employment?.dateOfJoining ? dayjs(defaultValues.employment.dateOfJoining) : null,
+                },
+            };
+            reset(formatted);
+        }
     }, [defaultValues, reset]);
 
     const watchSalary = watch('salaryStructure');
+
     const earnings = useMemo(() => {
         const { basicSalary = 0, hra = 0, da = 0, specialAllowance = 0, otherAllowances = 0 } = watchSalary || {};
         return Number(basicSalary) + Number(hra) + Number(da) + Number(specialAllowance) + Number(otherAllowances);
@@ -122,116 +167,616 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
 
     const net = Math.max(earnings - deductions, 0);
 
+    const steps = [
+        {
+            title: 'Personal Info',
+            icon: <UserOutlined />,
+            fields: ['personalInfo'],
+        },
+        {
+            title: 'Employment',
+            icon: <SafetyOutlined />,
+            fields: ['employment'],
+        },
+        {
+            title: 'Bank Details',
+            icon: <BankOutlined />,
+            fields: ['bankDetails'],
+        },
+        {
+            title: 'Salary',
+            icon: <DollarOutlined />,
+            fields: ['salaryStructure', 'password'],
+        },
+    ];
+
+    const handleNext = async () => {
+        const fields = steps[currentStep].fields;
+        const isValid = await trigger(fields);
+
+        if (isValid) {
+            setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+        } else {
+            message.error('Please fill all required fields correctly');
+        }
+    };
+
+    const handlePrevious = () => {
+        setCurrentStep((prev) => Math.max(prev - 1, 0));
+    };
+
+    const handleFormSubmit = (data) => {
+        const formatted = {
+            ...data,
+            personalInfo: {
+                ...data.personalInfo,
+                dateOfBirth: data.personalInfo.dateOfBirth ? dayjs(data.personalInfo.dateOfBirth).format('YYYY-MM-DD') : '',
+            },
+            employment: {
+                ...data.employment,
+                dateOfJoining: data.employment.dateOfJoining ? dayjs(data.employment.dateOfJoining).format('YYYY-MM-DD') : '',
+            },
+        };
+        onSubmit(formatted);
+    };
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <Card title="Personal Information">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="First Name" required {...register('personalInfo.firstName')} error={errors.personalInfo?.firstName?.message} />
-                    <Input label="Last Name" required {...register('personalInfo.lastName')} error={errors.personalInfo?.lastName?.message} />
-                    <Input label="Email" type="email" required {...register('personalInfo.email')} error={errors.personalInfo?.email?.message} />
-                    <Input label="Phone" required {...register('personalInfo.phone')} error={errors.personalInfo?.phone?.message} />
-                    <Input label="Date of Birth" type="date" required {...register('personalInfo.dateOfBirth')} error={errors.personalInfo?.dateOfBirth?.message} />
-                    <Input label="Street" {...register('personalInfo.address.street')} />
-                    <Input label="City" {...register('personalInfo.address.city')} />
-                    <Input label="State" {...register('personalInfo.address.state')} />
-                    <Input label="PIN Code" {...register('personalInfo.address.zipCode')} />
-                    <Input label="Country" {...register('personalInfo.address.country')} />
-                </div>
-            </Card>
+        <div>
+            <Steps current={currentStep} items={steps} style={{ marginBottom: 32 }} />
 
-            <Card title="Employment Details">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select
-                        label="Department"
-                        options={DEPARTMENTS.map((d) => ({ label: d, value: d }))}
-                        required
-                        {...register('employment.department')}
-                        error={errors.employment?.department?.message}
-                    />
-                    <Input label="Designation" required {...register('employment.designation')} error={errors.employment?.designation?.message} />
-                    <Input label="Date of Joining" type="date" required {...register('employment.dateOfJoining')} error={errors.employment?.dateOfJoining?.message} />
-                    <Select
-                        label="Status"
-                        options={[
-                            { label: 'Active', value: 'Active' },
-                            { label: 'Inactive', value: 'Inactive' },
-                            { label: 'Terminated', value: 'Terminated' },
-                            { label: 'Resigned', value: 'Resigned' },
-                        ]}
-                        {...register('employment.status')}
-                        error={errors.employment?.status?.message}
-                    />
-                </div>
-            </Card>
+            <form onSubmit={handleSubmit(handleFormSubmit)}>
+                {/* Step 0: Personal Information */}
+                {currentStep === 0 && (
+                    <Card title={<><UserOutlined /> Personal Information</>} bordered={false}>
+                        <Row gutter={[16, 16]}>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.firstName"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                First Name <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="Enter first name" status={errors.personalInfo?.firstName ? 'error' : ''} />
+                                            {errors.personalInfo?.firstName && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.personalInfo.firstName.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.lastName"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Last Name <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="Enter last name" status={errors.personalInfo?.lastName ? 'error' : ''} />
+                                            {errors.personalInfo?.lastName && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.personalInfo.lastName.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.email"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Email <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} type="email" size="large" placeholder="employee@company.com" status={errors.personalInfo?.email ? 'error' : ''} />
+                                            {errors.personalInfo?.email && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.personalInfo.email.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.phone"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Phone <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="9876543210" maxLength={10} status={errors.personalInfo?.phone ? 'error' : ''} />
+                                            {errors.personalInfo?.phone && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.personalInfo.phone.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.dateOfBirth"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Date of Birth <Text type="danger">*</Text>
+                                            </label>
+                                            <DatePicker {...field} size="large" style={{ width: '100%' }} format="DD-MM-YYYY" placeholder="Select date" />
+                                            {errors.personalInfo?.dateOfBirth && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.personalInfo.dateOfBirth.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
 
-            <Card title="Bank Details">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Account Number" required {...register('bankDetails.accountNumber')} error={errors.bankDetails?.accountNumber?.message} />
-                    <Input label="Account Holder Name" required {...register('bankDetails.accountHolderName')} error={errors.bankDetails?.accountHolderName?.message} />
-                    <Input label="IFSC Code" required {...register('bankDetails.ifscCode')} error={errors.bankDetails?.ifscCode?.message} />
-                    <Input label="Bank Name" required {...register('bankDetails.bankName')} error={errors.bankDetails?.bankName?.message} />
-                    <Input label="Branch" {...register('bankDetails.branch')} />
-                </div>
-            </Card>
-
-            <Card title="Salary Structure">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input label="Basic Salary" type="number" required {...register('salaryStructure.basicSalary')} error={errors.salaryStructure?.basicSalary?.message} />
-                    <Input label="HRA" type="number" {...register('salaryStructure.hra', { valueAsNumber: true })} error={errors.salaryStructure?.hra?.message} />
-                    <Input label="DA" type="number" {...register('salaryStructure.da', { valueAsNumber: true })} error={errors.salaryStructure?.da?.message} />
-                    <Input label="Special Allowance" type="number" {...register('salaryStructure.specialAllowance', { valueAsNumber: true })} error={errors.salaryStructure?.specialAllowance?.message} />
-                    <Input label="Other Allowances" type="number" {...register('salaryStructure.otherAllowances', { valueAsNumber: true })} error={errors.salaryStructure?.otherAllowances?.message} />
-                    <Input label="PF % (default 12%)" type="number" {...register('salaryStructure.pfPercentage', { valueAsNumber: true })} error={errors.salaryStructure?.pfPercentage?.message} />
-                    <Input label="Professional Tax" type="number" {...register('salaryStructure.professionalTax', { valueAsNumber: true })} error={errors.salaryStructure?.professionalTax?.message} />
-                    <Input label="ESI % (default 0.75%)" type="number" {...register('salaryStructure.esiPercentage', { valueAsNumber: true })} error={errors.salaryStructure?.esiPercentage?.message} />
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card padding="sm" className="bg-gray-50">
-                        <p className="text-xs text-gray-500">Gross Earnings</p>
-                        <p className="text-xl font-semibold text-gray-900">{formatCurrency(earnings)}</p>
+                            <Col xs={24}>
+                                <Divider orientation="left">Address (Optional)</Divider>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.address.street"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>Street</label>
+                                            <Input {...field} size="large" placeholder="Street address" />
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="personalInfo.address.city"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>City</label>
+                                            <Input {...field} size="large" placeholder="City" />
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={8}>
+                                <Controller
+                                    name="personalInfo.address.state"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>State</label>
+                                            <Input {...field} size="large" placeholder="State" />
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={8}>
+                                <Controller
+                                    name="personalInfo.address.zipCode"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>PIN Code</label>
+                                            <Input {...field} size="large" placeholder="110001" maxLength={6} />
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={8}>
+                                <Controller
+                                    name="personalInfo.address.country"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>Country</label>
+                                            <Input {...field} size="large" placeholder="India" />
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                        </Row>
                     </Card>
-                    <Card padding="sm" className="bg-gray-50">
-                        <p className="text-xs text-gray-500">Deductions</p>
-                        <p className="text-xl font-semibold text-gray-900">{formatCurrency(deductions)}</p>
-                    </Card>
-                    <Card padding="sm" className="bg-success-50 border-success-200">
-                        <p className="text-xs text-success-600">Net Salary (per month)</p>
-                        <p className="text-2xl font-bold text-success-700">{formatCurrency(net)}</p>
-                    </Card>
-                </div>
-            </Card>
-
-            {/* Password (only on create) */}
-            <Card title="Portal Access">
-                {!defaultValues?._id ? (
-                    <Input
-                        label="Temporary Password"
-                        type="password"
-                        {...register('password')}
-                        required
-                    />
-                ) : (
-                    <div>
-                        <Input
-                            label="New Password (Leave empty to keep current)"
-                            type="password"
-                            {...register('password')}
-                            placeholder="Enter new password to reset"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            Only fill this if you want to reset the employee's password
-                        </p>
-                    </div>
                 )}
-            </Card>
 
-            <div className="flex items-center justify-end gap-3">
-                <Button type="submit" variant="primary" loading={loading}>
-                    {loading ? 'Saving...' : 'Save Employee'}
-                </Button>
-            </div>
-        </form>
+                {/* Step 1: Employment Details */}
+                {currentStep === 1 && (
+                    <Card title={<><SafetyOutlined /> Employment Details</>} bordered={false}>
+                        <Row gutter={[16, 16]}>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="employment.department"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Department <Text type="danger">*</Text>
+                                            </label>
+                                            <Select {...field} size="large" style={{ width: '100%' }} placeholder="Select department">
+                                                {DEPARTMENTS.map((dept) => (
+                                                    <Option key={dept} value={dept}>{dept}</Option>
+                                                ))}
+                                            </Select>
+                                            {errors.employment?.department && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.employment.department.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="employment.designation"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Designation <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="e.g., Senior Developer" status={errors.employment?.designation ? 'error' : ''} />
+                                            {errors.employment?.designation && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.employment.designation.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="employment.dateOfJoining"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Date of Joining <Text type="danger">*</Text>
+                                            </label>
+                                            <DatePicker {...field} size="large" style={{ width: '100%' }} format="DD-MM-YYYY" placeholder="Select joining date" />
+                                            {errors.employment?.dateOfJoining && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.employment.dateOfJoining.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="employment.status"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>Status</label>
+                                            <Select {...field} size="large" style={{ width: '100%' }}>
+                                                <Option value="Active">Active</Option>
+                                                <Option value="Inactive">Inactive</Option>
+                                                <Option value="Terminated">Terminated</Option>
+                                                <Option value="Resigned">Resigned</Option>
+                                            </Select>
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                        </Row>
+                    </Card>
+                )}
+
+                {/* Step 2: Bank Details */}
+                {currentStep === 2 && (
+                    <Card title={<><BankOutlined /> Bank Details</>} bordered={false}>
+                        <Row gutter={[16, 16]}>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="bankDetails.accountNumber"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Account Number <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="Enter account number" status={errors.bankDetails?.accountNumber ? 'error' : ''} />
+                                            {errors.bankDetails?.accountNumber && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.bankDetails.accountNumber.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="bankDetails.accountHolderName"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Account Holder Name <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="As per bank records" status={errors.bankDetails?.accountHolderName ? 'error' : ''} />
+                                            {errors.bankDetails?.accountHolderName && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.bankDetails.accountHolderName.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="bankDetails.ifscCode"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                IFSC Code <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="e.g., SBIN0001234" maxLength={11} status={errors.bankDetails?.ifscCode ? 'error' : ''} style={{ textTransform: 'uppercase' }} />
+                                            {errors.bankDetails?.ifscCode && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.bankDetails.ifscCode.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="bankDetails.bankName"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>
+                                                Bank Name <Text type="danger">*</Text>
+                                            </label>
+                                            <Input {...field} size="large" placeholder="e.g., State Bank of India" status={errors.bankDetails?.bankName ? 'error' : ''} />
+                                            {errors.bankDetails?.bankName && (
+                                                <Text type="danger" style={{ fontSize: 12 }}>{errors.bankDetails.bankName.message}</Text>
+                                            )}
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Controller
+                                    name="bankDetails.branch"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: 8 }}>Branch (Optional)</label>
+                                            <Input {...field} size="large" placeholder="Branch name" />
+                                        </div>
+                                    )}
+                                />
+                            </Col>
+                        </Row>
+                    </Card>
+                )}
+
+                {/* Step 3: Salary Structure */}
+                {currentStep === 3 && (
+                    <>
+                        <Card title={<><DollarOutlined /> Salary Structure</>} bordered={false}>
+                            <Row gutter={[16, 16]}>
+                                <Col xs={24}>
+                                    <Title level={5}>Earnings</Title>
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.basicSalary"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>
+                                                    Basic Salary <Text type="danger">*</Text>
+                                                </label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="50000" />
+                                                {errors.salaryStructure?.basicSalary && (
+                                                    <Text type="danger" style={{ fontSize: 12 }}>{errors.salaryStructure.basicSalary.message}</Text>
+                                                )}
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.hra"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>HRA</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="15000" />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.da"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>DA (Dearness Allowance)</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="5000" />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.specialAllowance"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>Special Allowance</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="10000" />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.otherAllowances"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>Other Allowances</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="0" />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+
+                                <Col xs={24}>
+                                    <Divider />
+                                    <Title level={5}>Deductions</Title>
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.pfPercentage"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>PF (%)</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} max={100} suffix="%" placeholder="12" />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.professionalTax"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>Professional Tax</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="200" />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Controller
+                                        name="salaryStructure.esiPercentage"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: 8 }}>ESI (%)</label>
+                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} max={100} suffix="%" placeholder="0.75" step={0.01} />
+                                            </div>
+                                        )}
+                                    />
+                                </Col>
+                            </Row>
+
+                            <Divider />
+
+                            {/* Salary Summary */}
+                            <Row gutter={16}>
+                                <Col xs={24} sm={8}>
+                                    <Card style={{ background: '#f0f5ff', border: '1px solid #adc6ff' }}>
+                                        <Statistic
+                                            title="Gross Earnings"
+                                            value={earnings}
+                                            precision={2}
+                                            prefix="₹"
+                                            valueStyle={{ color: '#1890ff', fontSize: 24 }}
+                                        />
+                                    </Card>
+                                </Col>
+                                <Col xs={24} sm={8}>
+                                    <Card style={{ background: '#fff1f0', border: '1px solid #ffccc7' }}>
+                                        <Statistic
+                                            title="Total Deductions"
+                                            value={deductions}
+                                            precision={2}
+                                            prefix="₹"
+                                            valueStyle={{ color: '#cf1322', fontSize: 24 }}
+                                        />
+                                    </Card>
+                                </Col>
+                                <Col xs={24} sm={8}>
+                                    <Card style={{ background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                                        <Statistic
+                                            title="Net Salary"
+                                            value={net}
+                                            precision={2}
+                                            prefix="₹"
+                                            valueStyle={{ color: '#52c41a', fontSize: 28, fontWeight: 'bold' }}
+                                        />
+                                        <Text type="secondary" style={{ fontSize: 12 }}>Per Month</Text>
+                                    </Card>
+                                </Col>
+                            </Row>
+                        </Card>
+
+                        {/* Portal Access */}
+                        <Card title="Portal Access" style={{ marginTop: 16 }} bordered={false}>
+                            <Row gutter={16}>
+                                <Col xs={24} sm={12}>
+                                    {!isEdit ? (
+                                        <Controller
+                                            name="password"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <div>
+                                                    <label style={{ display: 'block', marginBottom: 8 }}>
+                                                        Temporary Password <Text type="danger">*</Text>
+                                                    </label>
+                                                    <Input.Password {...field} size="large" placeholder="Enter temporary password" />
+                                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                                        Employee will use this to login for the first time
+                                                    </Text>
+                                                </div>
+                                            )}
+                                        />
+                                    ) : (
+                                        <Controller
+                                            name="password"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <div>
+                                                    <label style={{ display: 'block', marginBottom: 8 }}>
+                                                        New Password (Optional)
+                                                    </label>
+                                                    <Input.Password {...field} size="large" placeholder="Leave empty to keep current password" />
+                                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                                        Only fill this if you want to reset the password
+                                                    </Text>
+                                                </div>
+                                            )}
+                                        />
+                                    )}
+                                </Col>
+                            </Row>
+                        </Card>
+                    </>
+                )}
+
+                {/* Navigation Buttons */}
+                <Card style={{ marginTop: 24 }} bordered={false}>
+                    <Row justify="space-between">
+                        <Col>
+                            {currentStep > 0 && (
+                                <Button size="large" icon={<ArrowLeftOutlined />} onClick={handlePrevious}>
+                                    Previous
+                                </Button>
+                            )}
+                        </Col>
+                        <Col>
+                            <Space>
+                                {currentStep < steps.length - 1 ? (
+                                    <Button type="primary" size="large" icon={<ArrowRightOutlined />} onClick={handleNext} iconPosition="end">
+                                        Next Step
+                                    </Button>
+                                ) : (
+                                    <Button type="primary" size="large" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
+                                        {loading ? 'Saving...' : (isEdit ? 'Update Employee' : 'Create Employee')}
+                                    </Button>
+                                )}
+                            </Space>
+                        </Col>
+                    </Row>
+                </Card>
+            </form>
+        </div>
     );
 };
 

@@ -5,8 +5,8 @@ import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import EmptyState from '@/components/common/EmptyState';
+import SkeletonTable from '@/components/common/SkeletonTable';
+import LottieEmptyState from '@/components/common/LottieEmptyState';
 import PageContainer from '@/components/layout/PageContainer';
 import PayrollRow from '@/components/domain/PayrollRow';
 import SalaryBreakdown from '@/components/domain/SalaryBreakdown';
@@ -15,7 +15,8 @@ import { approvePayroll, markAsPaid, addAdjustment } from '@/api/payrollApi';
 import { resendPayslipEmail } from '@/api/payslipApi';
 import { useProcessPayroll } from '@/hooks/useProcessPayroll';
 import { formatMonth, formatCurrency } from '@/utils/formatters';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
+import { confirmApprove, confirmPayment } from '@/utils/confirmations';
 
 const PayrollDetail = () => {
     const { month } = useParams();
@@ -49,72 +50,79 @@ const PayrollDetail = () => {
     };
 
     const handleApprove = async (payroll) => {
+        const employeeName = `${payroll.employeeId?.personalInfo?.firstName || ''} ${payroll.employeeId?.personalInfo?.lastName || ''}`;
+        const confirmed = await confirmApprove(`${employeeName}'s payroll`);
+
+        if (!confirmed) return;
+
         try {
             await approvePayroll(payroll._id);
-            toast.success('Payroll approved');
+            message.success('Payroll approved successfully');
             refetch();
         } catch (error) {
-            toast.error('Failed to approve payroll');
+            message.error('Failed to approve payroll');
         }
     };
 
     const handlePay = async (payroll) => {
+        const employeeName = `${payroll.employeeId?.personalInfo?.firstName || ''} ${payroll.employeeId?.personalInfo?.lastName || ''}`;
+        const amount = formatCurrency(payroll.netSalary);
+        const confirmed = await confirmPayment(amount, employeeName);
+
+        if (!confirmed) return;
+
         try {
             await markAsPaid(payroll._id);
-            toast.success('Marked as paid');
+            message.success('Successfully marked as paid');
             refetch();
         } catch (error) {
-            toast.error('Failed to mark as paid');
+            message.error('Failed to mark as paid');
         }
     };
 
     const handleResendEmail = async (payroll) => {
         try {
             await resendPayslipEmail(payroll._id);
-            toast.success('Payslip email resent successfully');
+            message.success('Payslip email resent successfully');
         } catch (error) {
-            toast.error('Failed to resend email');
+            message.error('Failed to resend email');
         }
     };
 
     const handleAdjustment = async () => {
         if (!selected) return;
-        
+
         if (!adjustmentForm.description.trim()) {
-            toast.error('Description is required');
+            message.error('Description is required');
             return;
         }
 
         if (adjustmentForm.amount <= 0) {
-            toast.error('Amount must be greater than 0');
+            message.error('Amount must be greater than 0');
             return;
         }
 
         try {
             await addAdjustment(selected._id, adjustmentForm);
-            toast.success('Adjustment added');
+            message.success('Adjustment added');
             setShowAdjustment(false);
             setSelected(null);
             setAdjustmentForm({ type: 'Bonus', amount: 0, description: '' });
             refetch();
         } catch (error) {
-            toast.error('Failed to add adjustment');
+            message.error('Failed to add adjustment');
         }
     };
 
     if (loading) {
-        return (
-            <div className="py-10 flex justify-center">
-                <LoadingSpinner size="lg" />
-            </div>
-        );
+        return <SkeletonTable rows={8} columns={5} hasActions={true} />;
     }
 
     if (!data) {
         return (
-            <EmptyState
-                title="No payroll found"
-                description="Process payroll first to view details"
+            <LottieEmptyState
+                title="No Payroll Data Found"
+                description="No payroll has been processed for this month yet. Please process payroll first to view details."
             />
         );
     }
@@ -232,8 +240,8 @@ const PayrollDetail = () => {
                 title="Add Adjustment"
                 footer={
                     <>
-                        <Button 
-                            variant="secondary" 
+                        <Button
+                            variant="secondary"
                             onClick={() => {
                                 setShowAdjustment(false);
                                 setAdjustmentForm({ type: 'Bonus', amount: 0, description: '' });

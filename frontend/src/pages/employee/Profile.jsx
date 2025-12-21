@@ -7,7 +7,8 @@ import PageContainer from '@/components/layout/PageContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { changePassword, updateProfile } from '@/api/authApi';
 import { formatDate } from '@/utils/formatters';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
+import { showConfirmation } from '@/utils/confirmations';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -37,26 +38,36 @@ const Profile = () => {
 
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('Passwords do not match');
+      message.error('Passwords do not match');
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      message.error('Password must be at least 6 characters');
       return;
     }
+
+    // Show confirmation dialog
+    const confirmed = await showConfirmation({
+      title: 'Change Password?',
+      text: 'Are you sure you want to change your password?',
+      icon: 'question',
+      confirmButtonText: 'Yes, change it',
+    });
+
+    if (!confirmed) return;
 
     try {
       setLoading(true);
       await changePassword({
         currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
+        newPassword: passwordForm.newPassword,
       });
-      toast.success('Password changed successfully');
-      setShowPasswordModal(false);
+      message.success('Password changed successfully');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordModal(false);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      message.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
     }
@@ -71,11 +82,11 @@ const Profile = () => {
           address: editForm.address
         }
       });
-      toast.success('Profile updated successfully');
+      message.success('Profile updated successfully');
       setShowEditModal(false);
       window.location.reload(); // Reload to fetch updated user data
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      message.error(error.response?.data?.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -116,9 +127,9 @@ const Profile = () => {
               <span className="font-medium text-gray-900">{formatDate(personal.dateOfBirth)}</span>
             </div>
           </div>
-          <Button 
-            variant="secondary" 
-            size="sm" 
+          <Button
+            variant="secondary"
+            size="sm"
             className="mt-4 w-full"
             onClick={() => setShowEditModal(true)}
           >
@@ -177,9 +188,9 @@ const Profile = () => {
         {/* Security */}
         <Card title="Security">
           <p className="text-sm text-gray-600 mb-4">Manage your password and account security</p>
-          <Button 
-            variant="primary" 
-            size="sm" 
+          <Button
+            variant="primary"
+            size="sm"
             className="w-full"
             onClick={() => setShowPasswordModal(true)}
           >
@@ -256,8 +267,8 @@ const Profile = () => {
           <Input
             label="Street Address"
             value={editForm.address.street}
-            onChange={(e) => setEditForm({ 
-              ...editForm, 
+            onChange={(e) => setEditForm({
+              ...editForm,
               address: { ...editForm.address, street: e.target.value }
             })}
           />
@@ -265,16 +276,16 @@ const Profile = () => {
             <Input
               label="City"
               value={editForm.address.city}
-              onChange={(e) => setEditForm({ 
-                ...editForm, 
+              onChange={(e) => setEditForm({
+                ...editForm,
                 address: { ...editForm.address, city: e.target.value }
               })}
             />
             <Input
               label="State"
               value={editForm.address.state}
-              onChange={(e) => setEditForm({ 
-                ...editForm, 
+              onChange={(e) => setEditForm({
+                ...editForm,
                 address: { ...editForm.address, state: e.target.value }
               })}
             />
@@ -282,8 +293,8 @@ const Profile = () => {
           <Input
             label="ZIP Code"
             value={editForm.address.zipCode}
-            onChange={(e) => setEditForm({ 
-              ...editForm, 
+            onChange={(e) => setEditForm({
+              ...editForm,
               address: { ...editForm.address, zipCode: e.target.value }
             })}
             placeholder="6-digit PIN code"

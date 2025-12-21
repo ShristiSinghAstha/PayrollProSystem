@@ -14,6 +14,10 @@ import Payslips from '@/pages/employee/Payslips';
 import Notifications from '@/pages/employee/Notifications';
 import Reports from '@/pages/admin/Reports';
 import Profile from '@/pages/employee/Profile';
+import LeaveApprovals from '@/pages/admin/LeaveApprovals';
+import MyLeaves from '@/pages/employee/MyLeaves';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 
 // Layouts
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -24,17 +28,19 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Public Route */}
-      <Route 
-        path="/login" 
+      {/* Public Routes */}
+      <Route
+        path="/login"
         element={
           isAuthenticated ? (
             <Navigate to={isAdmin ? '/admin/dashboard' : '/employee/dashboard'} replace />
           ) : (
             <Login />
           )
-        } 
+        }
       />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Admin Routes */}
       <Route
@@ -52,6 +58,7 @@ const AppRoutes = () => {
         <Route path="payroll" element={<PayrollList />} />
         <Route path="payroll/:month" element={<PayrollDetail />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="leaves" element={<LeaveApprovals />} />
       </Route>
 
       {/* Employee Routes */}
@@ -65,20 +72,21 @@ const AppRoutes = () => {
       >
         <Route path="dashboard" element={<EmployeeDashboard />} />
         <Route path="payslips" element={<Payslips />} />
+        <Route path="leaves" element={<MyLeaves />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 
       {/* Root redirect */}
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <Navigate to={
-            isAuthenticated 
+            isAuthenticated
               ? (isAdmin ? '/admin/dashboard' : '/employee/dashboard')
               : '/login'
           } replace />
-        } 
+        }
       />
 
       {/* 404 */}

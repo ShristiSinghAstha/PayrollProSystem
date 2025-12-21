@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getMyNotifications, getUnreadCount } from '@/api/notificationApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const useNotifications = (filters = {}) => {
   const [notifications, setNotifications] = useState([]);
@@ -14,14 +14,14 @@ export const useNotifications = (filters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getMyNotifications(filters);
       setNotifications(response.data.data.notifications);
       setUnreadCount(response.data.data.unreadCount);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch notifications';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch notifications';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -31,12 +31,12 @@ export const useNotifications = (filters = {}) => {
     fetchNotifications();
   }, [JSON.stringify(filters)]);
 
-  return { 
-    notifications, 
+  return {
+    notifications,
     unreadCount,
-    loading, 
+    loading,
     error,
-    refetch: fetchNotifications 
+    refetch: fetchNotifications
   };
 };
 
@@ -58,10 +58,10 @@ export const useUnreadCount = () => {
 
   useEffect(() => {
     fetchCount();
-    
+
     // Poll every 30 seconds -> let's try websockets later...
-    const interval = setInterval(fetchCount, 30000); 
-    
+    const interval = setInterval(fetchCount, 30000);
+
     return () => clearInterval(interval);
   }, []);
 

@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Card, Typography, Spin, Row, Col, Breadcrumb } from 'antd';
+import { HomeOutlined, TeamOutlined, UserAddOutlined, EditOutlined } from '@ant-design/icons';
 import PageContainer from '@/components/layout/PageContainer';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import Card from '@/components/common/Card';
 import EmployeeForm from '@/components/domain/EmployeeForm';
 import { useEmployee } from '@/hooks/useEmployees';
 import { useCreateEmployee } from '@/hooks/useCreateEmployee';
 import { useUpdateEmployee } from '@/hooks/useUpdateEmployee';
+
+const { Title, Text } = Typography;
 
 const EmployeeFormPage = () => {
     const { id } = useParams();
@@ -26,7 +28,7 @@ const EmployeeFormPage = () => {
             },
             employment: {
                 ...employee.employment,
-                dateOfJoining: employee?.employment?.dateOfJoining?.split('T')?.[0],  // ✅ ADD THIS
+                dateOfJoining: employee?.employment?.dateOfJoining?.split('T')?.[0],
             },
         };
     }, [employee]);
@@ -37,6 +39,10 @@ const EmployeeFormPage = () => {
             salaryStructure: {
                 ...data.salaryStructure,
                 basicSalary: Number(data.salaryStructure.basicSalary),
+                hra: Number(data.salaryStructure.hra || 0),
+                da: Number(data.salaryStructure.da || 0),
+                specialAllowance: Number(data.salaryStructure.specialAllowance || 0),
+                otherAllowances: Number(data.salaryStructure.otherAllowances || 0),
             },
         };
 
@@ -51,24 +57,36 @@ const EmployeeFormPage = () => {
 
     if (loadingEmployee && isEdit) {
         return (
-            <div className="py-10 flex justify-center">
-                <LoadingSpinner size="lg" />
-            </div>
+            <PageContainer>
+                <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                    <Spin size="large" tip="Loading employee data..." />
+                </div>
+            </PageContainer>
         );
     }
 
     return (
         <PageContainer>
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        {isEdit ? 'Edit Employee' : 'Add New Employee'}
-                    </h1>
-                    <p className="text-gray-600">Complete the onboarding details</p>
-                </div>
+            <div style={{ marginBottom: 24 }}>
+                <Breadcrumb
+                    items={[
+                        { title: <><HomeOutlined /> Dashboard</>, href: '/admin/dashboard' },
+                        { title: <><TeamOutlined /> Employees</>, href: '/admin/employees' },
+                        { title: isEdit ? <><EditOutlined /> Edit Employee</> : <><UserAddOutlined /> Add Employee</> },
+                    ]}
+                />
             </div>
 
-            <Card>
+            <div style={{ marginBottom: 24 }}>
+                <Title level={2} style={{ margin: 0 }}>
+                    {isEdit ? 'Edit Employee' : 'Add New Employee'}
+                </Title>
+                <Text type="secondary">
+                    {isEdit ? 'Update employee information and salary structure' : 'Complete the onboarding details to add a new employee'}
+                </Text>
+            </div>
+
+            <Card bordered={false} style={{ borderRadius: 8 }}>
                 <EmployeeForm
                     defaultValues={defaultValues}
                     onSubmit={handleSubmit}

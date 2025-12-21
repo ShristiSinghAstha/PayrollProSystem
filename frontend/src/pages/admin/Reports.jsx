@@ -1,167 +1,396 @@
-import { useState } from 'react';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { useState, useEffect } from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  DatePicker,
+  Select,
+  Button,
+  Typography,
+  Space,
+  Statistic,
+  Divider,
+  message
+} from 'antd';
+import {
+  DownloadOutlined,
+  RiseOutlined,
+  FallOutlined,
+  DollarOutlined,
+  TeamOutlined,
+  CalendarOutlined,
+  BarChartOutlined
+} from '@ant-design/icons';
+import { Column, Line, Pie, DualAxes } from '@ant-design/charts';
+import dayjs from 'dayjs';
 import PageContainer from '@/components/layout/PageContainer';
 import { usePayrollStats } from '@/hooks/usePayroll';
 import { useEmployeeStats } from '@/hooks/useEmployees';
-import { formatCurrency, formatMonth } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
+import axios from '@/api/axios';
+
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 const Reports = () => {
   const { stats: payrollStats, loading: payrollLoading } = usePayrollStats();
   const { stats: employeeStats, loading: employeeLoading } = useEmployeeStats();
-  const [selectedMonth, setSelectedMonth] = useState(payrollStats?.currentMonth || '');
+  const [dateRange, setDateRange] = useState([dayjs().subtract(6, 'month'), dayjs()]);
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
 
   const loading = payrollLoading || employeeLoading;
 
-  const handleExportCSV = () => {
-    if (!payrollStats) return;
+  // Prepare data for charts
+  const monthlyTrendData = (payrollStats?.byMonth || []).slice(0, 6).reverse().map(m => ({
+    month: dayjs(m._id).format('MMM YY'),
+    gross: m.totalGross,
+    deductions: m.totalDeductions,
+    net: m.totalNet,
+    employees: m.totalEmployees
+  }));
 
-    const csvData = [
-      ['Month', 'Employees', 'Gross', 'Deductions', 'Net'],
-      ...payrollStats.byMonth.map(m => [
-        m._id,
-        m.totalEmployees,
-        m.totalGross,
-        m.totalDeductions,
-        m.totalNet
-      ])
-    ];
+  const departmentData = (employeeStats?.byDepartment || []).map(dept => ({
+    department: dept._id,
+    count: dept.count,
+    percentage: ((dept.count / (employeeStats?.total || 1)) * 100).toFixed(1)
+  }));
 
-    const csv = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `payroll-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
+  // Salary distribution data (mock - you can enhance this)
+  const salaryDistributionData = [
+    { range: '< 30K', count: 12 },
+    { range: '30-50K', count: 25 },
+    { range: '50-75K', count: 18 },
+    { range: '75-100K', count: 10 },
+    { range: '> 100K', count: 5 }
+  ];
+
+  const handleExportPayroll = async () => {
+    try {
+      const response = await axios.get('/api/bulk/payroll/export', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payroll-report-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      message.success('Payroll report exported successfully');
+    } catch (error) {
+      message.error('Failed to export payroll report');
+    }
+  };
+
+  const handleExportEmployees = async () => {
+    try {
+      const response = await axios.get('/api/bulk/employees/export', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `employees-report-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      message.success('Employee report exported successfully');
+    } catch (error) {
+      message.error('Failed to export employee report');
+    }
+  };
+
+  // Column chart config for monthly trends
+  const columnConfig = {
+    data: monthlyTrendData,
+    isGroup: true,
+    xField: 'month',
+    yField: ['gross', 'net'],
+    seriesField: 'name',
+    label: {
+      position: 'top',
+      layout: [{ type: 'interval-adjust-position' }, { type: 'interval-hide-overlap' }, { type: 'adjust-color' }],
+    },
+    color: ['#5B8FF9', '#5AD8A6'],
+  };
+
+  // Line chart config for payroll trend
+  const lineConfig = {
+    data: monthlyTrendData,
+    xField: 'month',
+    yField: 'net',
+    point: {
+      size: 5,
+      shape: 'diamond',
+    },
+    label: {
+      style: {
+        fill: '#aaa',
+      },
+    },
+    color: '#1890ff',
+  };
+
+  // Pie chart config for department distribution
+  const pieConfig = {
+    data: departmentData,
+    angleField: 'count',
+    colorField: 'department',
+    radius: 0.8,
+    innerRadius: 0.6,
+    label: {
+      type: 'spider',
+      labelHeight: 28,
+      content: '{name}\n{percentage}%',
+    },
+    interactions: [{ type: 'element-selected' }, { type: 'element-active' }],
+  };
+
+  // Column chart for salary distribution
+  const salaryDistConfig = {
+    data: salaryDistributionData,
+    xField: 'range',
+    yField: 'count',
+    label: {
+      position: 'top',
+      style: {
+        fill: '#000000',
+        opacity: 0.6,
+      },
+    },
+    columnStyle: {
+      radius: [8, 8, 0, 0],
+    },
+    color: '#722ed1',
   };
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600">Monthly payout summaries and department analytics</p>
-        </div>
-        <Button variant="primary" onClick={handleExportCSV}>
-          📥 Export CSV
-        </Button>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Title level={2} style={{ margin: 0 }}>
+              <BarChartOutlined /> Reports & Analytics
+            </Title>
+            <Text type="secondary">Comprehensive insights into payroll and employee data</Text>
+          </Col>
+          <Col>
+            <Space>
+              <Button icon={<DownloadOutlined />} onClick={handleExportEmployees}>
+                Export Employees
+              </Button>
+              <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportPayroll}>
+                Export Payroll
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       </div>
 
-      {loading ? (
-        <div className="py-10 flex justify-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      ) : (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <p className="text-xs text-gray-500 uppercase">Current Month</p>
-              <p className="text-xl font-bold text-gray-900 mt-2">
-                {formatMonth(payrollStats?.currentMonth || '')}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {payrollStats?.employeesProcessed || 0} employees
-              </p>
-            </Card>
-            <Card>
-              <p className="text-xs text-gray-500 uppercase">Gross Payout</p>
-              <p className="text-xl font-bold text-gray-900 mt-2">
-                {formatCurrency(payrollStats?.currentMonthGross || 0)}
-              </p>
-            </Card>
-            <Card>
-              <p className="text-xs text-gray-500 uppercase">Deductions</p>
-              <p className="text-xl font-bold text-gray-900 mt-2">
-                {formatCurrency(payrollStats?.currentMonthDeductions || 0)}
-              </p>
-            </Card>
-            <Card className="bg-success-50 border-success-200">
-              <p className="text-xs text-success-700 uppercase">Net Payout</p>
-              <p className="text-2xl font-bold text-success-800 mt-2">
-                {formatCurrency(payrollStats?.currentMonthNet || 0)}
-              </p>
-            </Card>
-          </div>
-
-          {/* Status Breakdown */}
-          <Card title="Payroll Status" className="mb-6">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <p className="text-3xl font-bold text-yellow-700">
-                  {payrollStats?.pending || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Pending</p>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-3xl font-bold text-blue-700">
-                  {payrollStats?.approved || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Approved</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-3xl font-bold text-green-700">
-                  {payrollStats?.paid || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Paid</p>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <p className="text-3xl font-bold text-red-700">
-                  {payrollStats?.failed || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Failed</p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Monthly History */}
-          <Card title="Monthly Payroll History" className="mb-6">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Month</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employees</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gross</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deductions</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {payrollStats?.byMonth?.map((month) => (
-                    <tr key={month._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {formatMonth(month._id)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{month.totalEmployees}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(month.totalGross)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(month.totalDeductions)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                        {formatCurrency(month.totalNet)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Department-wise Cost Analysis */}
-          <Card title="Department-wise Employee Distribution">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {employeeStats?.byDepartment?.map((dept) => (
-                <div key={dept._id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">{dept._id}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{dept.count}</p>
-                  <p className="text-xs text-gray-500 mt-1">employees</p>
-                </div>
+      {/* Filters */}
+      <Card style={{ marginBottom: 24 }}>
+        <Row gutter={16} align="middle">
+          <Col>
+            <Text strong>Date Range:</Text>
+          </Col>
+          <Col>
+            <RangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              picker="month"
+              format="MMM YYYY"
+            />
+          </Col>
+          <Col>
+            <Text strong>Department:</Text>
+          </Col>
+          <Col>
+            <Select
+              value={selectedDepartment}
+              onChange={setSelectedDepartment}
+              style={{ width: 200 }}
+            >
+              <Option value="all">All Departments</Option>
+              {departmentData.map(d => (
+                <Option key={d.department} value={d.department}>{d.department}</Option>
               ))}
-            </div>
+            </Select>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Key Metrics */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Total Employees</span>}
+              value={employeeStats?.total || 0}
+              prefix={<TeamOutlined />}
+              valueStyle={{ color: '#fff' }}
+            />
           </Card>
-        </>
-      )}
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Active Employees</span>}
+              value={employeeStats?.active || 0}
+              prefix={<TeamOutlined />}
+              valueStyle={{ color: '#fff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Current Month</span>}
+              value={formatCurrency(payrollStats?.currentMonthNet || 0)}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: '#fff', fontSize: 20 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ background: '#43e97b 0%, #38f9d7 100%)' }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Avg Salary</span>}
+              value={formatCurrency((payrollStats?.currentMonthNet || 0) / (payrollStats?.employeesProcessed || 1))}
+              valueStyle={{ color: '#fff', fontSize: 20 }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Charts Row 1 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={16}>
+          <Card
+            title={
+              <Space>
+                <RiseOutlined style={{ color: '#1890ff' }} />
+                <span>Monthly Payroll Trend (Last 6 Months)</span>
+              </Space>
+            }
+            loading={loading}
+          >
+            <Line {...lineConfig} height={300} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card
+            title={
+              <Space>
+                <TeamOutlined style={{ color: '#52c41a' }} />
+                <span>Department Distribution</span>
+              </Space>
+            }
+            loading={loading}
+          >
+            <Pie {...pieConfig} height={300} />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Charts Row 2 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card
+            title="Salary Distribution"
+            loading={loading}
+          >
+            <Column {...salaryDistConfig} height={300} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card
+            title="Payroll Status Overview"
+            loading={loading}
+          >
+            <Row gutter={16}>
+              <Col span={6}>
+                <Statistic
+                  title="Pending"
+                  value={payrollStats?.pending || 0}
+                  valueStyle={{ color: '#faad14' }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="Approved"
+                  value={payrollStats?.approved || 0}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="Paid"
+                  value={payrollStats?.paid || 0}
+                  valueStyle={{ color: '#52c41a' }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="Failed"
+                  value={payrollStats?.failed || 0}
+                  valueStyle={{ color: '#ff4d4f' }}
+                />
+              </Col>
+            </Row>
+            <Divider />
+            <Row gutter={16} style={{ marginTop: 24 }}>
+              <Col span={12}>
+                <Card size="small" style={{ background: '#e6f7ff', border: '1px solid #91d5ff' }}>
+                  <Statistic
+                    title="Gross Payout"
+                    value={payrollStats?.currentMonthGross || 0}
+                    prefix="₹"
+                    precision={0}
+                    valueStyle={{ fontSize: 18 }}
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card size="small" style={{ background: '#fff1f0', border: '1px solid #ffccc7' }}>
+                  <Statistic
+                    title="Total Deductions"
+                    value={payrollStats?.currentMonthDeductions || 0}
+                    prefix="₹"
+                    precision={0}
+                    valueStyle={{ fontSize: 18 }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Department-wise Summary Table */}
+      <Card title="Department Summary">
+        <Row gutter={16}>
+          {departmentData.map((dept, index) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={index} style={{ marginBottom: 16 }}>
+              <Card
+                size="small"
+                style={{
+                  background: `hsl(${index * 60}, 70%, 95%)`,
+                  border: `1px solid hsl(${index * 60}, 70%, 80%)`
+                }}
+              >
+                <Text strong style={{ fontSize: 16 }}>{dept.department}</Text>
+                <div style={{ marginTop: 8 }}>
+                  <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{dept.count}</Text>
+                  <Text type="secondary"> employees</Text>
+                </div>
+                <Text type="secondary">{dept.percentage}% of total</Text>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Card>
     </PageContainer>
   );
 };
