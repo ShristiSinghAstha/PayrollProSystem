@@ -184,7 +184,7 @@ const EmployeeList = () => {
                         <span className="text-foreground">{employee.employment.department}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-foreground">{employee.employment.position}</td>
+                    <td className="px-6 py-4 text-foreground">{employee.employment.designation}</td>
                     <td className="px-6 py-4">
                       <span className={cn(
                         "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold",

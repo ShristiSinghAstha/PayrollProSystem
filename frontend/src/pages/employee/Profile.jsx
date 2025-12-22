@@ -144,7 +144,7 @@ const Profile = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
-              <p className="mt-1 text-foreground">{formatDate(personal.dob)}</p>
+              <p className="mt-1 text-foreground">{formatDate(personal.dateOfBirth)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Address</label>
@@ -180,7 +180,7 @@ const Profile = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Join Date</label>
-              <p className="mt-1 text-foreground">{formatDate(employment.joinDate)}</p>
+              <p className="mt-1 text-foreground">{formatDate(employment.dateOfJoining)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Status</label>

@@ -161,6 +161,29 @@ const MyLeaves = () => {
         return badges[type] || 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700';
     };
 
+    const getLeaveStatus = (startDate, endDate) => {
+        const now = dayjs();
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+
+        if (now.isBefore(start)) {
+            return 'Upcoming';
+        } else if (now.isAfter(end)) {
+            return 'Completed';
+        } else {
+            return 'Active';
+        }
+    };
+
+    const getLeaveStatusBadge = (status) => {
+        const badges = {
+            'Upcoming': 'inline-flex items-center rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700',
+            'Active': 'inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700',
+            'Completed': 'inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600'
+        };
+        return badges[status] || '';
+    };
+
     return (
         <PageContainer>
             {/* Header */}
@@ -285,6 +308,16 @@ const MyLeaves = () => {
                                                 >
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
+                                            )}
+                                            {leave.status === 'Approved' && (
+                                                <span className={getLeaveStatusBadge(getLeaveStatus(leave.startDate, leave.endDate))}>
+                                                    {getLeaveStatus(leave.startDate, leave.endDate)}
+                                                </span>
+                                            )}
+                                            {leave.status === 'Rejected' && (
+                                                <span className="inline-flex items-center rounded-md border border-red-300 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">
+                                                    No action
+                                                </span>
                                             )}
                                         </td>
                                     </tr>

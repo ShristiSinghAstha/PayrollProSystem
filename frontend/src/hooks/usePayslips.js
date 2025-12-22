@@ -34,12 +34,27 @@ export const usePayslips = (filters = {}) => {
     fetchPayslips();
   }, [JSON.stringify(filters)]);
 
+  const downloadPayslip = async (payslipId) => {
+    try {
+      const response = await import('@/api/payslipApi').then(mod => mod.downloadPayslip(payslipId));
+      // Open the payslip URL in a new tab
+      if (response.data?.data?.payslipUrl) {
+        window.open(response.data.data.payslipUrl, '_blank');
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to download payslip';
+      message.error(errorMsg);
+      throw err;
+    }
+  };
+
   return {
     payslips,
     loading,
     error,
     pagination,
-    refetch: fetchPayslips
+    refetch: fetchPayslips,
+    downloadPayslip
   };
 };
 
