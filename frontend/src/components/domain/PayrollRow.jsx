@@ -38,37 +38,39 @@ const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onPa
                 )}
             </td>
             <td className="px-4 py-3 text-sm text-gray-500">{payroll.paidAt ? formatDate(payroll.paidAt) : '-'}</td>
-            <td className="px-4 py-3 text-sm text-right space-x-2">
-                {onViewBreakdown && (
-                    <Button size="sm" variant="ghost" onClick={() => onViewBreakdown(payroll)}>
-                        View
-                    </Button>
-                )}
-                {onAddAdjustment && payroll.status === 'Pending' && (
-                    <Button size="sm" variant="secondary" onClick={() => onAddAdjustment(payroll)}>
-                        Adjustment
-                    </Button>
-                )}
-                {onApprove && payroll.status === 'Pending' && (
-                    <Button size="sm" variant="primary" onClick={() => onApprove(payroll)}>
-                        Approve
-                    </Button>
-                )}
-                {onPay && payroll.status === 'Approved' && (
-                    <Button size="sm" variant="success" onClick={() => onPay(payroll)}>
-                        Mark Paid
-                    </Button>
-                )}
-                {onResendEmail && payroll.status === 'Paid' && payroll.payslipGenerated && (
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onResendEmail(payroll)}
-                        title="Resend payslip email"
-                    >
-                        📧 Resend
-                    </Button>
-                )}
+            <td className="px-4 py-3 text-sm text-right">
+                <div className="flex items-center justify-end gap-2">
+                    {onViewBreakdown && (
+                        <Button size="sm" variant="outline" onClick={() => onViewBreakdown(payroll)}>
+                            View
+                        </Button>
+                    )}
+                    {onAddAdjustment && payroll.status === 'Pending' && (
+                        <Button size="sm" variant="outline" onClick={() => onAddAdjustment(payroll)}>
+                            Adjustment
+                        </Button>
+                    )}
+                    {onApprove && payroll.status === 'Pending' && (
+                        <Button size="sm" onClick={() => onApprove(payroll)}>
+                            Approve
+                        </Button>
+                    )}
+                    {onPay && payroll.status === 'Approved' && (
+                        <Button size="sm" onClick={() => onPay(payroll)} className="bg-green-600 hover:bg-green-700 text-white">
+                            Mark Paid
+                        </Button>
+                    )}
+                    {onResendEmail && payroll.status === 'Paid' && payroll.payslipGenerated && (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onResendEmail(payroll)}
+                            title="Resend payslip email"
+                        >
+                            📧 Resend
+                        </Button>
+                    )}
+                </div>
             </td>
         </tr>
     );

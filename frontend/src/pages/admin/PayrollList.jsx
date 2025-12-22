@@ -48,7 +48,12 @@ const PayrollList = () => {
 
         try {
             setProcessing(true);
-            await processMonthlyPayroll({ month: selectedMonth });
+            // Parse the selected month (format: "2026-01") into year and month
+            const [year, month] = selectedMonth.split('-');
+            await processMonthlyPayroll({
+                year: parseInt(year),
+                month: parseInt(month)
+            });
             message.success('Payroll processing started successfully');
             setShowProcessModal(false);
             setSelectedMonth('');

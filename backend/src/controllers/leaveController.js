@@ -1,6 +1,7 @@
 import Leave from '../models/Leave.js';
 import Employee from '../models/Employee.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
+import { emitToUser, emitToAdmins } from '../config/socket.js';
 
 // Apply for leave (Employee)
 export const applyLeave = asyncHandler(async (req, res) => {
@@ -45,13 +46,15 @@ export const applyLeave = asyncHandler(async (req, res) => {
 
     await leave.populate('employeeId', 'personalInfo.firstName personalInfo.lastName employeeId');
 
-    await logAction({
-        action: 'LEAVE_APPLIED',
-        entityType: 'Leave',
-        entityId: leave._id,
-        userId: req.user._id,
-        changes: { applied: leave },
-        req
+    // Emit socket events
+    emitToUser(employeeId, 'leave:created', {
+        message: 'Your leave application has been submitted successfully',
+        leave
+    });
+
+    emitToAdmins('leave:newApplication', {
+        message: `New leave application from ${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
+        leave
     });
 
     res.status(201).json({
@@ -109,16 +112,14 @@ export const getMyLeaves = asyncHandler(async (req, res) => {
     const employeeId = req.user._id;
     const { year = new Date().getFullYear() } = req.query;
 
-    const startOfYear = new Date(year, 0, 1);
-    const endOfYear = new Date(year, 11, 31, 23, 59, 59);
-
+    // Get all leaves for the employee (no date filtering to show all past and future leaves)
     const leaves = await Leave.find({
-        employeeId,
-        startDate: { $gte: startOfYear, $lte: endOfYear }
+        employeeId
     })
         .populate('approvedBy', 'personalInfo.firstName personalInfo.lastName')
         .sort({ createdAt: -1 });
 
+    // Calculate balance for the specified year
     const balance = await Leave.getLeaveBalance(employeeId, year);
 
     res.json({
@@ -160,16 +161,16 @@ export const approveLeave = asyncHandler(async (req, res) => {
     leave.approve(req.user._id, remarks);
     await leave.save();
 
-    await logAction({
-        action: 'LEAVE_APPROVED',
-        entityType: 'Leave',
-        entityId: leave._id,
-        userId: req.user._id,
-        changes: { status: 'Approved', remarks },
-        req
+    // Emit socket events
+    emitToUser(leave.employeeId._id, 'leave:approved', {
+        message: `Your leave application has been approved${remarks ? ': ' + remarks : ''}`,
+        leave
     });
 
-    // TODO: Send notification/email to employee
+    emitToAdmins('leave:statusUpdate', {
+        message: `Leave approved for ${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
+        leave
+    });
 
     res.json({
         success: true,
@@ -202,16 +203,17 @@ export const rejectLeave = asyncHandler(async (req, res) => {
     leave.reject(req.user._id, reason);
     await leave.save();
 
-    await logAction({
-        action: 'LEAVE_REJECTED',
-        entityType: 'Leave',
-        entityId: leave._id,
-        userId: req.user._id,
-        changes: { status: 'Rejected', reason },
-        req
+    // Emit socket events
+    emitToUser(leave.employeeId._id, 'leave:rejected', {
+        message: `Your leave application has been rejected: ${reason}`,
+        leave,
+        reason
     });
 
-    // TODO: Send notification/email to employee
+    emitToAdmins('leave:statusUpdate', {
+        message: `Leave rejected for ${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
+        leave
+    });
 
     res.json({
         success: true,
@@ -243,13 +245,15 @@ export const deleteLeave = asyncHandler(async (req, res) => {
 
     await leave.deleteOne();
 
-    await logAction({
-        action: 'LEAVE_DELETED',
-        entityType: 'Leave',
-        entityId: leave._id,
-        userId: req.user._id,
-        changes: { deleted: leave },
-        req
+    // Emit socket events
+    emitToUser(employeeId, 'leave:deleted', {
+        message: 'Leave application deleted successfully',
+        leaveId: id
+    });
+
+    emitToAdmins('leave:statusUpdate', {
+        message: 'A leave application was deleted',
+        leaveId: id
     });
 
     res.json({
@@ -260,16 +264,8 @@ export const deleteLeave = asyncHandler(async (req, res) => {
 
 // Get leave statistics (Admin)
 export const getLeaveStats = asyncHandler(async (req, res) => {
-    const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1);
-    const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59);
-
+    // Get stats for all leaves (no year filtering)
     const stats = await Leave.aggregate([
-        {
-            $match: {
-                startDate: { $gte: startOfYear, $lte: endOfYear }
-            }
-        },
         {
             $group: {
                 _id: '$status',
@@ -282,7 +278,6 @@ export const getLeaveStats = asyncHandler(async (req, res) => {
     const byType = await Leave.aggregate([
         {
             $match: {
-                startDate: { $gte: startOfYear, $lte: endOfYear },
                 status: 'Approved'
             }
         },
@@ -297,12 +292,12 @@ export const getLeaveStats = asyncHandler(async (req, res) => {
 
     const result = {
         byStatus: stats.reduce((acc, item) => {
-            acc[item._id.toLowerCase()] = {
+            acc[item._id] = {
                 count: item.count,
                 totalDays: item.totalDays
             };
             return acc;
-        }, {}),
+        }, { Pending: { count: 0, totalDays: 0 }, Approved: { count: 0, totalDays: 0 }, Rejected: { count: 0, totalDays: 0 } }),
         byType: byType.reduce((acc, item) => {
             acc[item._id] = {
                 count: item.count,

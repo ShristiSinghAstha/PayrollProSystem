@@ -133,25 +133,25 @@ const PayrollDetail = () => {
                     <h1 className="text-2xl font-bold text-gray-900">Payroll: {formatMonth(month)}</h1>
                     <p className="text-gray-600">Review payroll before approval and payment</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                     {summary?.statusBreakdown?.pending > 0 && (
                         <Button
-                            variant="primary"
+                            size="lg"
                             onClick={handleBulkApprove}
-                            loading={bulkLoading}
                             disabled={bulkLoading}
+                            className="gap-2"
                         >
-                            Approve All Pending ({summary.statusBreakdown.pending})
+                            {bulkLoading ? 'Processing...' : `Approve All Pending (${summary.statusBreakdown.pending})`}
                         </Button>
                     )}
                     {summary?.statusBreakdown?.approved > 0 && (
                         <Button
-                            variant="success"
+                            size="lg"
                             onClick={handleBulkPay}
-                            loading={bulkLoading}
                             disabled={bulkLoading}
+                            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
                         >
-                            Pay All Approved ({summary.statusBreakdown.approved})
+                            {bulkLoading ? 'Processing...' : `Pay All Approved (${summary.statusBreakdown.approved})`}
                         </Button>
                     )}
                 </div>

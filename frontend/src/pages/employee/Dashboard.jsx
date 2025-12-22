@@ -57,7 +57,7 @@ const EmployeeDashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Last Salary</p>
                   <p className="mt-2 text-3xl font-semibold text-foreground">
-                    ₹<CountUp end={data?.lastPayslip?.netSalary || 0} duration={2} separator="," />
+                    ₹<CountUp end={data?.currentPayroll?.netSalary || 0} duration={2} separator="," />
                   </p>
                 </div>
                 <div className="rounded-lg bg-muted p-3">
@@ -75,7 +75,7 @@ const EmployeeDashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Leave Balance</p>
                   <p className="mt-2 text-3xl font-semibold text-foreground">
-                    <CountUp end={data?.leaveBalance || 0} duration={2} />
+                    <CountUp end={0} duration={2} />
                   </p>
                 </div>
                 <div className="rounded-lg bg-muted p-3">
@@ -93,7 +93,7 @@ const EmployeeDashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Payslips</p>
                   <p className="mt-2 text-3xl font-semibold text-foreground">
-                    <CountUp end={data?.totalPayslips || 0} duration={2} />
+                    <CountUp end={data?.recentPayslips?.length || 0} duration={2} />
                   </p>
                 </div>
                 <div className="rounded-lg bg-muted p-3">
@@ -133,30 +133,27 @@ const EmployeeDashboard = () => {
           <Card className="border">
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Latest Payslip</h3>
-              {data?.lastPayslip ? (
+              {data?.currentPayroll ? (
                 <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Month:</span>
                     <span className="font-medium text-foreground">
-                      {formatDate(data.lastPayslip.month, 'MMMM YYYY')}
+                      {formatDate(data.currentPayroll.month, 'MMMM YYYY')}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Gross Salary:</span>
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(data.lastPayslip.grossSalary)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Deductions:</span>
-                    <span className="font-medium text-destructive">
-                      {formatCurrency(data.lastPayslip.totalDeductions)}
+                    <span className="text-sm text-muted-foreground">Status:</span>
+                    <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${data.currentPayroll.status === 'Paid'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                      {data.currentPayroll.status}
                     </span>
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t">
                     <span className="text-sm font-semibold text-foreground">Net Salary:</span>
                     <span className="text-lg font-bold text-foreground">
-                      {formatCurrency(data.lastPayslip.netSalary)}
+                      {formatCurrency(data.currentPayroll.netSalary)}
                     </span>
                   </div>
                 </div>

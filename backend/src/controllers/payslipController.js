@@ -9,17 +9,17 @@ export const getMyPayslips = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const payslips = await Payroll.find({ 
+    const payslips = await Payroll.find({
         employeeId,
         status: 'Paid',
         payslipGenerated: true
     })
-    .select('month year earnings.gross deductions.total netSalary payslipUrl paidAt')
-    .sort({ year: -1, month: -1 })
-    .skip(skip)
-    .limit(parseInt(limit));
+        .select('month year earnings.gross deductions.total netSalary payslipUrl paidAt status')
+        .sort({ year: -1, month: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
 
-    const total = await Payroll.countDocuments({ 
+    const total = await Payroll.countDocuments({
         employeeId,
         status: 'Paid',
         payslipGenerated: true

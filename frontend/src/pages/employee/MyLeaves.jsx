@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import PageContainer from '@/components/layout/PageContainer';
 import { applyLeave, getMyLeaves, deleteLeave } from '@/api/leaveApi';
 import { formatDate } from '@/utils/formatters';
+import { useSocket } from '@/contexts/SocketContext';
 
 const MyLeaves = () => {
     const [leaves, setLeaves] = useState([]);
@@ -22,10 +23,56 @@ const MyLeaves = () => {
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const { socket, connected } = useSocket();
 
     useEffect(() => {
         fetchLeaves();
     }, []);
+
+    // Socket event listeners for real-time updates
+    useEffect(() => {
+        if (!socket || !connected) return;
+
+        // Listen for leave creation confirmation
+        socket.on('leave:created', (data) => {
+            console.log('Leave created event received:', data);
+            setSuccessMessage(data.message || 'Leave application created');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            fetchLeaves();
+        });
+
+        // Listen for leave approval
+        socket.on('leave:approved', (data) => {
+            console.log('Leave approved event received:', data);
+            setSuccessMessage(data.message || 'Your leave has been approved!');
+            setTimeout(() => setSuccessMessage(''), 5000);
+            fetchLeaves();
+        });
+
+        // Listen for leave rejection
+        socket.on('leave:rejected', (data) => {
+            console.log('Leave rejected event received:', data);
+            setErrorMessage(data.message || 'Your leave has been rejected');
+            setTimeout(() => setErrorMessage(''), 5000);
+            fetchLeaves();
+        });
+
+        // Listen for leave deletion
+        socket.on('leave:deleted', (data) => {
+            console.log('Leave deleted event received:', data);
+            setSuccessMessage(data.message || 'Leave application deleted');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            fetchLeaves();
+        });
+
+        // Cleanup listeners on unmount
+        return () => {
+            socket.off('leave:created');
+            socket.off('leave:approved');
+            socket.off('leave:rejected');
+            socket.off('leave:deleted');
+        };
+    }, [socket, connected]);
 
     const fetchLeaves = async () => {
         try {
@@ -152,8 +199,12 @@ const MyLeaves = () => {
                             <div className="space-y-2">
                                 <p className="text-sm font-medium text-muted-foreground">{type}</p>
                                 <div className="flex items-baseline gap-2">
-                                    <p className="text-2xl font-semibold text-foreground">{data.remaining || data.allocated || 0}</p>
+                                    {/* Show remaining for allocated types, used for non-allocated types like LOP */}
+                                    <p className="text-2xl font-semibold text-foreground">
+                                        {data.allocated ? (data.remaining || 0) : (data.used || 0)}
+                                    </p>
                                     {data.allocated && <p className="text-sm text-muted-foreground">/ {data.allocated} days</p>}
+                                    {!data.allocated && <p className="text-sm text-muted-foreground">days</p>}
                                 </div>
                                 {data.allocated && (
                                     <>
@@ -167,7 +218,7 @@ const MyLeaves = () => {
                                     </>
                                 )}
                                 {!data.allocated && (
-                                    <p className="text-xs text-muted-foreground">{data.used || 0} used</p>
+                                    <p className="text-xs text-muted-foreground">Loss of Pay</p>
                                 )}
                             </div>
                         </CardContent>
@@ -284,7 +335,7 @@ const MyLeaves = () => {
                                         <option value="LOP">LOP (Loss of Pay)</option>
                                     </select>
                                 </div>
-                                <div class Name="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium mb-2 block">Start Date *</label>
                                         <input
