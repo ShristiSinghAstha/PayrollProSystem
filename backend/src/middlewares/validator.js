@@ -67,8 +67,13 @@ export const employeeValidation = {
             .notEmpty().withMessage('Date of joining is required')
             .isISO8601().withMessage('Invalid date format')
             .custom((value) => {
-                if (new Date(value) > new Date()) {
-                    throw new Error('Date of joining cannot be in the future');
+                const joiningDate = new Date(value);
+                const today = new Date();
+                const thirtyDaysFromNow = new Date();
+                thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+                if (joiningDate > thirtyDaysFromNow) {
+                    throw new Error('Date of joining cannot be more than 30 days in the future');
                 }
                 return true;
             }),
