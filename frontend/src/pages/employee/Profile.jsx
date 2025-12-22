@@ -144,7 +144,7 @@ const Profile = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
-              <p className="mt-1 text-foreground">{formatDate(personal.dob)}</p>
+              <p className="mt-1 text-foreground">{formatDate(personal.dateOfBirth)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Address</label>
@@ -180,14 +180,14 @@ const Profile = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Join Date</label>
-              <p className="mt-1 text-foreground">{formatDate(employment.joinDate)}</p>
+              <p className="mt-1 text-foreground">{formatDate(employment.dateOfJoining)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Status</label>
               <p className="mt-1">
                 <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${employment.status === 'Active'
-                    ? 'bg-green-50 text-green-700 border-green-200'
-                    : 'bg-gray-50 text-gray-700 border-gray-200'
+                  ? 'bg-green-50 text-green-700 border-green-200'
+                  : 'bg-gray-50 text-gray-700 border-gray-200'
                   }`}>
                   {employment.status}
                 </span>
@@ -224,9 +224,12 @@ const Profile = () => {
 
       {/* Password Change Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowPasswordModal(false)}
+        >
+          <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+            <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <CardTitle>Change Password</CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setShowPasswordModal(false)}>
@@ -234,7 +237,7 @@ const Profile = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div>
                 <label className="text-sm font-medium">Current Password</label>
                 <input
@@ -277,9 +280,12 @@ const Profile = () => {
 
       {/* Edit Profile Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowEditModal(false)}
+        >
+          <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+            <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <CardTitle>Edit Profile</CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
@@ -287,7 +293,7 @@ const Profile = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div>
                 <label className="text-sm font-medium">Phone</label>
                 <input

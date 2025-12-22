@@ -5,6 +5,7 @@ import { Clock, CheckCircle, XCircle, Calendar, Filter, User, X } from "lucide-r
 import PageContainer from '@/components/layout/PageContainer';
 import { getAllLeaves, approveLeave, rejectLeave, getLeaveStats } from '@/api/leaveApi';
 import { formatDate } from '@/utils/formatters';
+import { useSocket } from '@/contexts/SocketContext';
 
 const LeaveApprovals = () => {
     const [leaves, setLeaves] = useState([]);
@@ -19,11 +20,39 @@ const LeaveApprovals = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const { socket, connected } = useSocket();
 
     useEffect(() => {
         fetchLeaves();
         fetchStats();
     }, [filters]);
+
+    // Socket event listeners for real-time updates
+    useEffect(() => {
+        if (!socket || !connected) return;
+
+        // Listen for new leave applications
+        socket.on('leave:newApplication', (data) => {
+            console.log('New leave application received:', data);
+            setSuccessMessage(data.message || 'New leave application received');
+            setTimeout(() => setSuccessMessage(''), 4000);
+            fetchLeaves();
+            fetchStats();
+        });
+
+        // Listen for any leave status updates
+        socket.on('leave:statusUpdate', (data) => {
+            console.log('Leave status update received:', data);
+            fetchLeaves();
+            fetchStats();
+        });
+
+        // Cleanup listeners on unmount
+        return () => {
+            socket.off('leave:newApplication');
+            socket.off('leave:statusUpdate');
+        };
+    }, [socket, connected]);
 
     const fetchLeaves = async () => {
         try {
@@ -140,7 +169,7 @@ const LeaveApprovals = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
-                                <p className="mt-2 text-3xl font-semibold text-foreground">{stats?.pending || 0}</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">{stats?.byStatus?.Pending?.count || 0}</p>
                             </div>
                             <div className="rounded-lg bg-yellow-50 p-3">
                                 <Clock className="h-6 w-6 text-yellow-600" />
@@ -154,7 +183,7 @@ const LeaveApprovals = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                                <p className="mt-2 text-3xl font-semibold text-foreground">{stats?.approved || 0}</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">{stats?.byStatus?.Approved?.count || 0}</p>
                             </div>
                             <div className="rounded-lg bg-green-50 p-3">
                                 <CheckCircle className="h-6 w-6 text-green-600" />
@@ -168,7 +197,7 @@ const LeaveApprovals = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                                <p className="mt-2 text-3xl font-semibold text-foreground">{stats?.rejected || 0}</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">{stats?.byStatus?.Rejected?.count || 0}</p>
                             </div>
                             <div className="rounded-lg bg-red-50 p-3">
                                 <XCircle className="h-6 w-6 text-red-600" />

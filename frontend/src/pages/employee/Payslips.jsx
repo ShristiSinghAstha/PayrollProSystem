@@ -59,10 +59,10 @@ const Payslips = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 font-medium text-foreground">
-                      {formatCurrency(payslip.grossSalary)}
+                      {formatCurrency(payslip.earnings?.gross || 0)}
                     </td>
                     <td className="px-6 py-4 text-destructive font-medium">
-                      {formatCurrency(payslip.totalDeductions)}
+                      {formatCurrency(payslip.deductions?.total || 0)}
                     </td>
                     <td className="px-6 py-4 text-foreground font-bold">
                       {formatCurrency(payslip.netSalary)}
@@ -78,16 +78,20 @@ const Payslips = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownload(payslip._id, payslip.month)}
-                        disabled={downloading === payslip._id}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        {downloading === payslip._id ? 'Downloading...' : 'Download'}
-                      </Button>
+                      {payslip.payslipUrl ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownload(payslip._id, payslip.month)}
+                          disabled={downloading === payslip._id}
+                          className="gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          {downloading === payslip._id ? 'Downloading...' : 'Download'}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not available</span>
+                      )}
                     </td>
                   </tr>
                 ))}

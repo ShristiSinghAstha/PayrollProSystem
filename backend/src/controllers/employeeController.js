@@ -42,7 +42,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
         salaryStructure,
         password: tempPassword
     });
-    
+
     await logEmployeeCreation(
         employee,
         getPerformedBy(req),
@@ -229,6 +229,7 @@ export const getEmployeeStats = asyncHandler(async (req, res) => {
 export const getEmployeeDashboard = asyncHandler(async (req, res) => {
     const employeeId = req.user._id;
     const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const currentYear = new Date().getFullYear();
 
     const currentPayroll = await Payroll.findOne({
         employeeId,
@@ -249,12 +250,58 @@ export const getEmployeeDashboard = asyncHandler(async (req, res) => {
         read: false
     });
 
+    // Import Leave model and get leave balance
+    const Leave = (await import('../models/Leave.js')).default;
+    const leaveBalance = await Leave.getLeaveBalance(employeeId);
+
+    // Get Year-to-Date earnings
+    const ytdEarnings = await Payroll.aggregate([
+        {
+            $match: {
+                employeeId,
+                year: currentYear,
+                status: 'Paid'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalGross: { $sum: '$earnings.gross' },
+                totalDeductions: { $sum: '$deductions.total' },
+                totalNet: { $sum: '$netSalary' },
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    // Get upcoming approved leaves
+    const upcomingLeaves = await Leave.find({
+        employeeId,
+        status: 'Approved',
+        startDate: { $gte: new Date() }
+    })
+        .select('leaveType startDate endDate totalDays reason')
+        .sort({ startDate: 1 })
+        .limit(5);
+
+    // Get recent notifications (last 5)
+    const recentNotifications = await Notification.find({
+        employeeId
+    })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('message type createdAt read');
+
     res.status(200).json({
         success: true,
         data: {
             currentPayroll,
             recentPayslips,
-            unreadNotifications: unreadCount
+            unreadNotifications: unreadCount,
+            leaveBalance,
+            ytdEarnings: ytdEarnings[0] || { totalGross: 0, totalDeductions: 0, totalNet: 0, count: 0 },
+            upcomingLeaves,
+            recentNotifications
         }
     });
 });

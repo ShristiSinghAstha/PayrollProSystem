@@ -134,19 +134,6 @@ const Login = () => {
                 {loading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <p className="text-xs text-slate-600 mb-2 font-semibold">Demo Credentials:</p>
-              <div className="space-y-1.5 text-xs">
-                <p className="text-slate-700 font-mono">
-                  <span className="font-semibold text-slate-900">Admin:</span> admin@payrollpro.com / admin123
-                </p>
-                <p className="text-slate-700 font-mono">
-                  <span className="font-semibold text-slate-900">Employee:</span> employee@payrollpro.com / employee123
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 

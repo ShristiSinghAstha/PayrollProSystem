@@ -95,13 +95,10 @@ leaveSchema.methods.reject = function (approverId, reason) {
 
 // Static method to get leave balance for an employee
 leaveSchema.statics.getLeaveBalance = async function (employeeId, year = new Date().getFullYear()) {
-    const startOfYear = new Date(year, 0, 1);
-    const endOfYear = new Date(year, 11, 31, 23, 59, 59);
-
+    // Get all approved leaves (not filtered by year anymore)
     const leaves = await this.find({
         employeeId,
-        status: 'Approved',
-        startDate: { $gte: startOfYear, $lte: endOfYear }
+        status: 'Approved'
     });
 
     const balance = {
@@ -160,9 +157,9 @@ leaveSchema.statics.getLOPDaysForMonth = async function (employeeId, year, month
 };
 
 // Validation before save
-leaveSchema.pre('save', function (next) {
+leaveSchema.pre('save', async function () {
     if (this.endDate < this.startDate) {
-        return next(new Error('End date must be after or equal to start date'));
+        throw new Error('End date must be after or equal to start date');
     }
 
     // Calculate total days if not set
@@ -170,8 +167,6 @@ leaveSchema.pre('save', function (next) {
         const diffTime = Math.abs(this.endDate - this.startDate);
         this.totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     }
-
-    next();
 });
 
 const Leave = mongoose.model('Leave', leaveSchema);
