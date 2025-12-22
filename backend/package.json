@@ -1,13 +1,39 @@
 {
-  "name": "backend",
+  "name": "payroll-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "PayrollPro - Employee Payroll Management System (Admin Backend)",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Tests will be added\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "payroll",
+    "employee-management",
+    "salary-processing"
+  ],
+  "author": "PayrollPro Team",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "module",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.3.1",
+    "express": "^5.2.1",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.0.0",
+    "mongoose": "^9.0.1",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.11",
+    "pdfkit": "^0.17.2",
+    "socket.io": "^4.8.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
 }
