@@ -1,144 +1,197 @@
-import { useAuth } from '@/contexts/AuthContext';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import Badge from '@/components/common/Badge';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import EmptyState from '@/components/common/EmptyState';
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, FileText, DollarSign, TrendingUp, Bell } from "lucide-react";
+import { motion } from 'framer-motion';
+import CountUp from 'react-countup';
 import PageContainer from '@/components/layout/PageContainer';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
-import { formatCurrency, formatMonth } from '@/utils/formatters';
-import { useNavigate } from 'react-router-dom';
+import { formatCurrency, formatDate } from '@/utils/formatters';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 100 }
+  }
+};
 
 const EmployeeDashboard = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { data, loading, error } = useEmployeeDashboard();
-
-  const currentPayroll = data?.currentPayroll;
-  const recentPayslips = data?.recentPayslips || [];
-  const unreadNotifications = data?.unreadNotifications || 0;
-
-  const getStatusVariant = (status) => {
-    const variants = {
-      Pending: 'warning',
-      Approved: 'info',
-      Paid: 'success',
-      Failed: 'error'
-    };
-    return variants[status] || 'default';
-  };
+  const { data, loading } = useEmployeeDashboard();
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome, {user?.personalInfo?.firstName || 'User'}
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-8"
+      >
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          Welcome back, {data?.employee?.personalInfo?.firstName}!
         </h1>
-        <p className="text-gray-600">Here is your payroll overview</p>
-      </div>
+        <p className="mt-2 text-muted-foreground">
+          Here's what's happening with your account today.
+        </p>
+      </motion.div>
 
-      {loading ? (
-        <div className="py-10 flex justify-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      ) : error ? (
-        <Card>
-          <EmptyState
-            title="Unable to load dashboard"
-            description={error}
-            action={
-              <Button variant="primary" onClick={() => window.location.reload()}>
-                Retry
-              </Button>
-            }
-          />
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Current Month Salary Card */}
-          <Card className="lg:col-span-2">
-            <p className="text-xs text-gray-500 uppercase">Current Month Salary</p>
-            {currentPayroll ? (
-              <div className="mt-2">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{formatMonth(currentPayroll.month)}</p>
-                    <p className="text-sm text-gray-600">Net Salary: {formatCurrency(currentPayroll.netSalary)}</p>
-                  </div>
-                  <Badge variant={getStatusVariant(currentPayroll.status)}>
-                    {currentPayroll.status}
-                  </Badge>
+      {/* Stats Cards */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8"
+      >
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Last Salary</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    ₹<CountUp end={data?.lastPayslip?.netSalary || 0} duration={2} separator="," />
+                  </p>
                 </div>
-                
-                {currentPayroll.status === 'Paid' && currentPayroll.payslipGenerated && (
-                  <Button variant="primary" onClick={() => navigate('/employee/payslips')}>
-                    Download Payslip
-                  </Button>
-                )}
-                
-                {currentPayroll.status === 'Pending' && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    ⏳ Payroll is being processed. You'll be notified once completed.
-                  </p>
-                )}
-                
-                {currentPayroll.status === 'Approved' && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    ✓ Payroll approved. Payment will be processed soon.
-                  </p>
-                )}
+                <div className="rounded-lg bg-muted p-3">
+                  <DollarSign className="h-6 w-6 text-muted-foreground" />
+                </div>
               </div>
-            ) : (
-              <div className="mt-2">
-                <p className="text-gray-600">No payroll processed yet for this month.</p>
-                <p className="text-sm text-gray-500 mt-1">Your payslip will appear here once it's processed.</p>
-              </div>
-            )}
+            </CardContent>
           </Card>
+        </motion.div>
 
-          {/* Notifications Card */}
-          <Card>
-            <p className="text-xs text-gray-500 uppercase">Notifications</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{unreadNotifications}</p>
-            <p className="text-sm text-gray-600">Unread alerts</p>
-            <Button 
-              variant="secondary" 
-              className="mt-3 w-full" 
-              onClick={() => navigate('/employee/notifications')}
-            >
-              View Notifications
-            </Button>
-          </Card>
-
-          {/* Recent Payslips Card */}
-          <Card className="lg:col-span-3" title="Recent Payslips">
-            {recentPayslips.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No payslips available yet</p>
-                <p className="text-sm text-gray-500 mt-1">Your payslips will appear here once generated</p>
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Leave Balance</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    <CountUp end={data?.leaveBalance || 0} duration={2} />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <Calendar className="h-6 w-6 text-muted-foreground" />
+                </div>
               </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {recentPayslips.map((payslip) => (
-                  <div key={payslip._id} className="py-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{formatMonth(payslip.month)}</p>
-                      <p className="text-sm text-gray-600">{formatCurrency(payslip.netSalary)}</p>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => navigate('/employee/payslips')}
-                    >
-                      Download
-                    </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Payslips</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    <CountUp end={data?.totalPayslips || 0} duration={2} />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <FileText className="h-6 w-6 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Notifications</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    <CountUp end={data?.unreadNotifications || 0} duration={2} />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <Bell className="h-6 w-6 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          <Card className="border">
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Latest Payslip</h3>
+              {data?.lastPayslip ? (
+                <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Month:</span>
+                    <span className="font-medium text-foreground">
+                      {formatDate(data.lastPayslip.month, 'MMMM YYYY')}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Gross Salary:</span>
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(data.lastPayslip.grossSalary)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Deductions:</span>
+                    <span className="font-medium text-destructive">
+                      {formatCurrency(data.lastPayslip.totalDeductions)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t">
+                    <span className="text-sm font-semibold text-foreground">Net Salary:</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {formatCurrency(data.lastPayslip.netSalary)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No payslips available</p>
+              )}
+            </CardContent>
           </Card>
-        </div>
-      )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <Card className="border">
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Recent Notifications</h3>
+              <div className="space-y-3">
+                {data?.recentNotifications?.slice(0, 3).map((notification, index) => (
+                  <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
+                    <Bell className="h-4 w-4 text-muted-foreground mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-foreground">{notification.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDate(notification.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                )) || <p className="text-sm text-muted-foreground">No notifications</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </PageContainer>
   );
 };

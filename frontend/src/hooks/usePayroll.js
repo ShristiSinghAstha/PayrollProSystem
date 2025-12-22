@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { 
-  getPayrollRecords, 
-  getPayrollById, 
-  getPayrollByMonth,
-  getPayrollStats 
+import {
+  getPayrollRecords,
+  getPayrollById,
+  getPayrollStats,
+  getPayrollByMonth
 } from '@/api/payrollApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const usePayroll = (filters = {}) => {
   const [payrolls, setPayrolls] = useState([]);
@@ -22,14 +22,14 @@ export const usePayroll = (filters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getPayrollRecords(filters);
       setPayrolls(response.data.data);
       setPagination(response.data.pagination);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch payroll records';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch payroll records';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -39,12 +39,12 @@ export const usePayroll = (filters = {}) => {
     fetchPayrolls();
   }, [JSON.stringify(filters)]);
 
-  return { 
-    payrolls, 
-    loading, 
-    error, 
+  return {
+    payrolls,
+    loading,
+    error,
     pagination,
-    refetch: fetchPayrolls 
+    refetch: fetchPayrolls
   };
 };
 
@@ -63,13 +63,13 @@ export const usePayrollDetail = (id) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await getPayrollById(id);
         setPayroll(response.data.data);
       } catch (err) {
-        const message = err.response?.data?.message || 'Failed to fetch payroll';
-        setError(message);
-        toast.error(message);
+        const errorMsg = err.response?.data?.message || 'Failed to fetch payroll';
+        setError(errorMsg);
+        message.error(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -90,13 +90,13 @@ export const usePayrollByMonth = (month) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getPayrollByMonth(month);
       setData(response.data.data);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch monthly payroll';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch monthly payroll';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -111,11 +111,11 @@ export const usePayrollByMonth = (month) => {
     fetchMonthPayroll();
   }, [month]);
 
-  return { 
-    data, 
-    loading, 
+  return {
+    data,
+    loading,
     error,
-    refetch: fetchMonthPayroll 
+    refetch: fetchMonthPayroll
   };
 };
 
@@ -128,13 +128,13 @@ export const usePayrollStats = (filters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getPayrollStats(filters);
       setStats(response.data.data);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch stats';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch stats';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }

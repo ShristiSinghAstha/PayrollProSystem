@@ -1,5 +1,5 @@
-import Badge from '@/components/common/Badge';
-import Button from '@/components/common/Button';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onPay, onResendEmail }) => {
@@ -21,7 +21,15 @@ const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onPa
             <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(payroll.deductions?.total)}</td>
             <td className="px-4 py-3 text-sm text-gray-900 font-semibold">{formatCurrency(payroll.netSalary)}</td>
             <td className="px-4 py-3 text-sm">
-                <Badge variant={statusVariant}>{payroll.status}</Badge>
+                <span className={cn(
+                    "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+                    payroll.status === 'Pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
+                    payroll.status === 'Approved' && "bg-blue-50 text-blue-700 border-blue-200",
+                    payroll.status === 'Paid' && "bg-green-50 text-green-700 border-green-200",
+                    payroll.status === 'Failed' && "bg-red-50 text-red-700 border-red-200",
+                )}>
+                    {payroll.status}
+                </span>
                 {payroll.status === 'Paid' && payroll.notificationSent && (
                     <p className="text-xs text-green-600 mt-1">✓ Email sent</p>
                 )}
@@ -52,9 +60,9 @@ const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onPa
                     </Button>
                 )}
                 {onResendEmail && payroll.status === 'Paid' && payroll.payslipGenerated && (
-                    <Button 
-                        size="sm" 
-                        variant="ghost" 
+                    <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => onResendEmail(payroll)}
                         title="Resend payslip email"
                     >

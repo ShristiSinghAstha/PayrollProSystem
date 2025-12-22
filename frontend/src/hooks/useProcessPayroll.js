@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { processMonthlyPayroll, bulkApprove, bulkPayAndGeneratePayslips } from '@/api/payrollApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const useProcessPayroll = () => {
     const [loading, setLoading] = useState(false);
@@ -13,21 +13,20 @@ export const useProcessPayroll = () => {
             const response = await processMonthlyPayroll(payload);
 
             if (response.data.totalErrors > 0) {
-                toast.error(
-                    `Payroll processed with ${response.data.totalErrors} errors. Check details.`,
-                    { duration: 5000 }
+                message.error(
+                    `Payroll processed with ${response.data.totalErrors} errors. Check details.`
                 );
                 // Show detailed errors in console or modal
                 console.error('Payroll errors:', response.data.errors);
             } else {
-                toast.success('Payroll processed successfully');
+                message.success('Payroll processed successfully');
             }
 
             return response.data;
         } catch (err) {
-            const message = err.response?.data?.message || 'Failed to process payroll';
-            setError(message);
-            toast.error(message);
+            const errorMsg = err.response?.data?.message || 'Failed to process payroll';
+            setError(errorMsg);
+            message.error(errorMsg);
             throw err;
         } finally {
             setLoading(false);
@@ -39,12 +38,12 @@ export const useProcessPayroll = () => {
             setLoading(true);
             setError(null);
             const response = await bulkApprove(month);
-            toast.success('All payrolls approved');
+            message.success('All payrolls approved');
             return response.data;
         } catch (err) {
-            const message = err.response?.data?.message || 'Failed to approve payrolls';
-            setError(message);
-            toast.error(message);
+            const errorMsg = err.response?.data?.message || 'Failed to approve payrolls';
+            setError(errorMsg);
+            message.error(errorMsg);
             throw err;
         } finally {
             setLoading(false);
@@ -56,12 +55,12 @@ export const useProcessPayroll = () => {
             setLoading(true);
             setError(null);
             const response = await bulkPayAndGeneratePayslips(month);
-            toast.success('Payments initiated and payslips generated');
+            message.success('Payments initiated and payslips generated');
             return response.data;
         } catch (err) {
-            const message = err.response?.data?.message || 'Failed to pay payrolls';
-            setError(message);
-            toast.error(message);
+            const errorMsg = err.response?.data?.message || 'Failed to pay payrolls';
+            setError(errorMsg);
+            message.error(errorMsg);
             throw err;
         } finally {
             setLoading(false);

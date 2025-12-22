@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { updateEmployee } from '@/api/employeeApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const useUpdateEmployee = () => {
   const [loading, setLoading] = useState(false);
@@ -12,12 +12,12 @@ export const useUpdateEmployee = () => {
       setError(null);
 
       const response = await updateEmployee(id, payload);
-      toast.success('Employee updated successfully');
+      message.success('Employee updated successfully');
       return response.data;
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to update employee';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to update employee';
+      setError(errorMsg);
+      message.error(errorMsg);
       throw err;
     } finally {
       setLoading(false);

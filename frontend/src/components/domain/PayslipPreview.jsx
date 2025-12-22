@@ -1,6 +1,6 @@
-import Card from '@/components/common/Card';
-import Badge from '@/components/common/Badge';
-import Button from '@/components/common/Button';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { formatCurrency, formatMonth } from '@/utils/formatters';
 
 const PayslipPreview = ({ payslip, onDownload }) => {
@@ -18,7 +18,14 @@ const PayslipPreview = ({ payslip, onDownload }) => {
           </h4>
           <p className="text-sm text-gray-500">{employeeId?.employment?.department}</p>
         </div>
-        <Badge variant={status === 'Paid' ? 'success' : 'warning'}>{status}</Badge>
+        <span className={cn(
+          "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+          status === 'Paid'
+            ? "bg-green-50 text-green-700 border-green-200"
+            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+        )}>
+          {status}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

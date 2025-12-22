@@ -1,167 +1,307 @@
 import { useState } from 'react';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download, TrendingUp, TrendingDown, DollarSign, Users, Calendar, BarChart3 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart as RechartsPie,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+import dayjs from 'dayjs';
 import PageContainer from '@/components/layout/PageContainer';
 import { usePayrollStats } from '@/hooks/usePayroll';
 import { useEmployeeStats } from '@/hooks/useEmployees';
-import { formatCurrency, formatMonth } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
+import axios from '@/api/axios';
+import { message } from 'antd';
 
 const Reports = () => {
   const { stats: payrollStats, loading: payrollLoading } = usePayrollStats();
   const { stats: employeeStats, loading: employeeLoading } = useEmployeeStats();
-  const [selectedMonth, setSelectedMonth] = useState(payrollStats?.currentMonth || '');
+  const [loadingExport, setLoadingExport] = useState(false);
 
   const loading = payrollLoading || employeeLoading;
 
-  const handleExportCSV = () => {
-    if (!payrollStats) return;
+  // Prepare data for charts
+  const monthlyTrendData = (payrollStats?.byMonth || []).slice(0, 6).reverse().map(m => ({
+    month: dayjs(m._id).format('MMM YY'),
+    gross: m.totalGross,
+    deductions: m.totalDeductions,
+    net: m.totalNet,
+    employees: m.totalEmployees
+  }));
 
-    const csvData = [
-      ['Month', 'Employees', 'Gross', 'Deductions', 'Net'],
-      ...payrollStats.byMonth.map(m => [
-        m._id,
-        m.totalEmployees,
-        m.totalGross,
-        m.totalDeductions,
-        m.totalNet
-      ])
-    ];
+  const departmentData = (employeeStats?.byDepartment || []).map((dept, index) => ({
+    name: dept._id,
+    value: dept.count,
+    color: ['#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'][index]
+  }));
 
-    const csv = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `payroll-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
+  // Salary distribution (mock data - you can enhance this)
+  const salaryDistributionData = [
+    { range: '< ₹30K', count: 12 },
+    { range: '₹30-50K', count: 25 },
+    { range: '₹50-75K', count: 18 },
+    { range: '₹75-100K', count: 10 },
+    { range: '> ₹100K', count: 5 }
+  ];
+
+  const handleExportPayroll = async () => {
+    try {
+      setLoadingExport(true);
+      const response = await axios.get('/api/bulk/payroll/export', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payroll-report-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      message.success('Payroll report exported successfully');
+    } catch (error) {
+      message.error('Failed to export payroll report');
+    } finally {
+      setLoadingExport(false);
+    }
   };
+
+  const handleExportEmployees = async () => {
+    try {
+      setLoadingExport(true);
+      const response = await axios.get('/api/bulk/employees/export', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `employees-report-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      message.success('Employee report exported successfully');
+    } catch (error) {
+      message.error('Failed to export employee report');
+    } finally {
+      setLoadingExport(false);
+    }
+  };
+
+  // Calculate totals
+  const totalGross = monthlyTrendData.reduce((sum, item) => sum + item.gross, 0);
+  const totalNet = monthlyTrendData.reduce((sum, item) => sum + item.net, 0);
+  const totalDeductions = monthlyTrendData.reduce((sum, item) => sum + item.deductions, 0);
+  const avgEmployees = Math.round(monthlyTrendData.reduce((sum, item) => sum + item.employees, 0) / monthlyTrendData.length);
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600">Monthly payout summaries and department analytics</p>
+      {/* Header */}
+      <div className="border-b bg-card mb-8" style={{ margin: '-24px -24px 32px -24px', padding: '32px' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Reports & Analytics</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Comprehensive insights into payroll and employee data
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleExportEmployees} disabled={loadingExport} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export Employees
+            </Button>
+            <Button onClick={handleExportPayroll} disabled={loadingExport} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export Payroll
+            </Button>
+          </div>
         </div>
-        <Button variant="primary" onClick={handleExportCSV}>
-          📥 Export CSV
-        </Button>
       </div>
 
-      {loading ? (
-        <div className="py-10 flex justify-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      ) : (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <p className="text-xs text-gray-500 uppercase">Current Month</p>
-              <p className="text-xl font-bold text-gray-900 mt-2">
-                {formatMonth(payrollStats?.currentMonth || '')}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {payrollStats?.employeesProcessed || 0} employees
-              </p>
-            </Card>
-            <Card>
-              <p className="text-xs text-gray-500 uppercase">Gross Payout</p>
-              <p className="text-xl font-bold text-gray-900 mt-2">
-                {formatCurrency(payrollStats?.currentMonthGross || 0)}
-              </p>
-            </Card>
-            <Card>
-              <p className="text-xs text-gray-500 uppercase">Deductions</p>
-              <p className="text-xl font-bold text-gray-900 mt-2">
-                {formatCurrency(payrollStats?.currentMonthDeductions || 0)}
-              </p>
-            </Card>
-            <Card className="bg-success-50 border-success-200">
-              <p className="text-xs text-success-700 uppercase">Net Payout</p>
-              <p className="text-2xl font-bold text-success-800 mt-2">
-                {formatCurrency(payrollStats?.currentMonthNet || 0)}
-              </p>
-            </Card>
-          </div>
-
-          {/* Status Breakdown */}
-          <Card title="Payroll Status" className="mb-6">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <p className="text-3xl font-bold text-yellow-700">
-                  {payrollStats?.pending || 0}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <Card className="border">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Gross</p>
+                <p className="mt-2 text-3xl font-semibold text-foreground">
+                  ₹{(totalGross / 1000).toFixed(0)}K
                 </p>
-                <p className="text-sm text-gray-600 mt-1">Pending</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3 w-3" />
+                  Last 6 months
+                </p>
               </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-3xl font-bold text-blue-700">
-                  {payrollStats?.approved || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Approved</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-3xl font-bold text-green-700">
-                  {payrollStats?.paid || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Paid</p>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <p className="text-3xl font-bold text-red-700">
-                  {payrollStats?.failed || 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Failed</p>
+              <div className="rounded-lg bg-muted p-3">
+                <DollarSign className="h-6 w-6 text-muted-foreground" />
               </div>
             </div>
-          </Card>
+          </CardContent>
+        </Card>
 
-          {/* Monthly History */}
-          <Card title="Monthly Payroll History" className="mb-6">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Month</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employees</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gross</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deductions</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {payrollStats?.byMonth?.map((month) => (
-                    <tr key={month._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {formatMonth(month._id)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{month.totalEmployees}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(month.totalGross)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(month.totalDeductions)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                        {formatCurrency(month.totalNet)}
-                      </td>
-                    </tr>
+        <Card className="border">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Net</p>
+                <p className="mt-2 text-3xl font-semibold text-foreground">
+                  ₹{(totalNet / 1000).toFixed(0)}K
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  Last 6 months
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted p-3">
+                <BarChart3 className="h-6 w-6 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Deductions</p>
+                <p className="mt-2 text-3xl font-semibold text-foreground">
+                  ₹{(totalDeductions / 1000).toFixed(0)}K
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <TrendingDown className="h-3 w-3" />
+                  All time total
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted p-3">
+                <DollarSign className="h-6 w-6 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Avg. Employees</p>
+                <p className="mt-2 text-3xl font-semibold text-foreground">{avgEmployees}</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  Per month
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted p-3">
+                <Users className="h-6 w-6 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
+        {/* Monthly Payroll Trend */}
+        <Card className="border lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Monthly Payroll Trend</CardTitle>
+            <CardDescription>Gross, Net, and Deductions over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyTrendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#e2e8f0" }} />
+                <YAxis
+                  tick={{ fill: "#64748b", fontSize: 12 }}
+                  axisLine={{ stroke: "#e2e8f0" }}
+                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                />
+                <Tooltip
+                  formatter={(value) => `₹${value.toLocaleString()}`}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="gross" stroke="#64748b" strokeWidth={2} name="Gross" />
+                <Line type="monotone" dataKey="net" stroke="#94a3b8" strokeWidth={2} name="Net" />
+                <Line type="monotone" dataKey="deductions" stroke="#cbd5e1" strokeWidth={2} name="Deductions" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Department Distribution */}
+        <Card className="border">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Department Distribution</CardTitle>
+            <CardDescription>Employee count by department</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPie>
+                <Pie
+                  data={departmentData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {departmentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </Pie>
+                <Tooltip />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
+                />
+              </RechartsPie>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Department-wise Cost Analysis */}
-          <Card title="Department-wise Employee Distribution">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {employeeStats?.byDepartment?.map((dept) => (
-                <div key={dept._id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">{dept._id}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{dept.count}</p>
-                  <p className="text-xs text-gray-500 mt-1">employees</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </>
-      )}
+      {/* Salary Distribution */}
+      <Card className="border">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Salary Distribution</CardTitle>
+          <CardDescription>Number of employees by salary range</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={salaryDistributionData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="range" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#e2e8f0" }} />
+              <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#e2e8f0" }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "white",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "6px",
+                }}
+              />
+              <Bar dataKey="count" fill="#64748b" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 };

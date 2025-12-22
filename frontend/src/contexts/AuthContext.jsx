@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login as loginApi, logout as logoutApi, getMe } from '@/api/authApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 const AuthContext = createContext(null);
 
@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
-      
+
       if (token) {
         try {
           const response = await getMe();
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('token');
         }
       }
-      
+
       setLoading(false);
     };
 
@@ -35,21 +35,21 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await loginApi(credentials);
       const { token, data } = response.data;
-      
+
       localStorage.setItem('token', token);
       setUser(data.user);
-      
+
       // Navigate based on role
       if (data.user.role === 'admin') {
         navigate('/admin/dashboard');
       } else {
         navigate('/employee/dashboard');
       }
-      
-      toast.success(`Welcome back, ${data.user.personalInfo.firstName}!`);
+
+      // Success message handled in Login component
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
-      toast.error(message);
+      const errorMsg = error.response?.data?.message || 'Login failed';
+      message.error(errorMsg);
       throw error;
     }
   };
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       setUser(null);
       navigate('/login');
-      toast.success('Logged out successfully');
+      message.success('Logged out successfully');
     }
   };
 

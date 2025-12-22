@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import EmptyState from '@/components/common/EmptyState';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import SkeletonCard from '@/components/common/SkeletonCard';
+import LottieEmptyState from '@/components/common/LottieEmptyState';
 import PageContainer from '@/components/layout/PageContainer';
 import NotificationItem from '@/components/domain/NotificationItem';
 import { useNotifications } from '@/hooks/useNotifications';
 import { markAsRead, markAllAsRead } from '@/api/notificationApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -24,7 +24,6 @@ const Notifications = () => {
     if (notification.type === 'PAYSLIP_READY' || notification.type === 'PAYMENT_SUCCESS') {
       navigate('/employee/payslips');
     } else if (notification.link) {
-      // If notification has a custom link, open it
       window.open(notification.link, '_blank');
     }
   };
@@ -32,10 +31,10 @@ const Notifications = () => {
   const handleMarkAll = async () => {
     try {
       await markAllAsRead();
-      toast.success('All notifications marked as read');
+      message.success('All notifications marked as read');
       refetch();
     } catch (error) {
-      toast.error('Failed to mark all as read');
+      message.error('Failed to mark all as read');
     }
   };
 
@@ -43,8 +42,8 @@ const Notifications = () => {
     <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-gray-600">Your payroll alerts</p>
+          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+          <p className="text-muted-foreground">Your payroll alerts</p>
         </div>
         {notifications.length > 0 && (
           <Button variant="secondary" onClick={handleMarkAll}>
@@ -53,24 +52,33 @@ const Notifications = () => {
         )}
       </div>
 
-      <Card>
-        {loading ? (
-          <div className="py-10 flex justify-center">
-            <LoadingSpinner />
-          </div>
-        ) : notifications.length === 0 ? (
-          <EmptyState title="No notifications" description="You are all caught up." />
-        ) : (
-          <div className="space-y-3">
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification._id}
-                notification={notification}
-                onClick={handleClick}
-              />
-            ))}
-          </div>
-        )}
+      <Card className="border">
+        <CardContent className="pt-6">
+          {loading ? (
+            <div>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} style={{ marginBottom: 12 }}>
+                  <SkeletonCard rows={2} hasTitle={false} hasAvatar={true} height={16} />
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
+            <LottieEmptyState
+              title="All Caught Up!"
+              description="You have no new notifications. We'll notify you when something important happens."
+            />
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <NotificationItem
+                  key={notification._id}
+                  notification={notification}
+                  onClick={handleClick}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
       </Card>
     </PageContainer>
   );

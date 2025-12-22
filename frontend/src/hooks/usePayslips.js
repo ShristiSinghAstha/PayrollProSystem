@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMyPayslips, getPayslipById } from '@/api/payslipApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const usePayslips = (filters = {}) => {
   const [payslips, setPayslips] = useState([]);
@@ -17,14 +17,14 @@ export const usePayslips = (filters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getMyPayslips(filters);
       setPayslips(response.data.data);
       setPagination(response.data.pagination);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch payslips';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch payslips';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -34,12 +34,12 @@ export const usePayslips = (filters = {}) => {
     fetchPayslips();
   }, [JSON.stringify(filters)]);
 
-  return { 
-    payslips, 
-    loading, 
-    error, 
+  return {
+    payslips,
+    loading,
+    error,
     pagination,
-    refetch: fetchPayslips 
+    refetch: fetchPayslips
   };
 };
 
@@ -58,13 +58,13 @@ export const usePayslip = (id) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await getPayslipById(id);
         setPayslip(response.data.data);
       } catch (err) {
-        const message = err.response?.data?.message || 'Failed to fetch payslip';
-        setError(message);
-        toast.error(message);
+        const errorMsg = err.response?.data?.message || 'Failed to fetch payslip';
+        setError(errorMsg);
+        message.error(errorMsg);
       } finally {
         setLoading(false);
       }

@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import Input from '@/components/common/Input';
-import Modal from '@/components/common/Modal';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import PageContainer from '@/components/layout/PageContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { changePassword, updateProfile } from '@/api/authApi';
 import { formatDate } from '@/utils/formatters';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
+import { showConfirmation } from '@/utils/confirmations';
+import { User, Briefcase, CreditCard, Lock, Edit2, X } from 'lucide-react';
 
 const Profile = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,26 +37,35 @@ const Profile = () => {
 
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('Passwords do not match');
+      message.error('Passwords do not match');
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      message.error('Password must be at least 6 characters');
       return;
     }
+
+    const confirmed = await showConfirmation({
+      title: 'Change Password?',
+      text: 'Are you sure you want to change your password?',
+      icon: 'question',
+      confirmButtonText: 'Yes, change it',
+    });
+
+    if (!confirmed) return;
 
     try {
       setLoading(true);
       await changePassword({
         currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
+        newPassword: passwordForm.newPassword,
       });
-      toast.success('Password changed successfully');
-      setShowPasswordModal(false);
+      message.success('Password changed successfully');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordModal(false);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      message.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
     }
@@ -71,11 +80,11 @@ const Profile = () => {
           address: editForm.address
         }
       });
-      toast.success('Profile updated successfully');
+      message.success('Profile updated successfully');
       setShowEditModal(false);
-      window.location.reload(); // Reload to fetch updated user data
+      window.location.reload();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      message.error('Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -83,213 +92,261 @@ const Profile = () => {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <p className="text-gray-600">Your personal information</p>
+      {/* Header */}
+      <div className="border-b bg-card mb-8" style={{ margin: '-24px -24px 32px -24px', padding: '40px 32px' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">My Profile</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Manage your personal information</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowPasswordModal(true)}>
+              <Lock className="h-4 w-4 mr-2" />
+              Change Password
+            </Button>
+            <Button onClick={() => setShowEditModal(true)}>
+              <Edit2 className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
+          </div>
         </div>
-        <Button variant="danger" onClick={logout}>
-          Logout
-        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Personal Details */}
-        <Card title="Personal Details">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Name</span>
-              <span className="font-medium text-gray-900">
-                {personal.firstName} {personal.lastName}
-              </span>
+      {/* Content */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Personal Information */}
+        <Card className="border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Personal Information
+            </CardTitle>
+            <CardDescription>Your basic personal details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">First Name</label>
+                <p className="mt-1 text-foreground">{personal.firstName}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Last Name</label>
+                <p className="mt-1 text-foreground">{personal.lastName}</p>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Email</span>
-              <span className="font-medium text-gray-900">{personal.email}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Email</label>
+              <p className="mt-1 text-foreground">{personal.email}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Phone</span>
-              <span className="font-medium text-gray-900">{personal.phone}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Phone</label>
+              <p className="mt-1 text-foreground">{personal.phone || 'Not provided'}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Date of Birth</span>
-              <span className="font-medium text-gray-900">{formatDate(personal.dateOfBirth)}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
+              <p className="mt-1 text-foreground">{formatDate(personal.dob)}</p>
             </div>
-          </div>
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="mt-4 w-full"
-            onClick={() => setShowEditModal(true)}
-          >
-            Edit Contact Info
-          </Button>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Address</label>
+              <p className="mt-1 text-foreground">
+                {personal.address?.street}, {personal.address?.city},{' '}
+                {personal.address?.state} {personal.address?.zipCode}
+              </p>
+            </div>
+          </CardContent>
         </Card>
 
-        {/* Employment */}
-        <Card title="Employment">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Employee ID</span>
-              <span className="font-medium text-gray-900">{user?.employeeId}</span>
+        {/* Employment Information */}
+        <Card className="border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Employment Information
+            </CardTitle>
+            <CardDescription>Your work details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Employee ID</label>
+              <p className="mt-1 text-foreground font-mono">{user?.employeeId}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Department</span>
-              <span className="font-medium text-gray-900">{employment.department}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Department</label>
+              <p className="mt-1 text-foreground">{employment.department}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Designation</span>
-              <span className="font-medium text-gray-900">{employment.designation}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Position</label>
+              <p className="mt-1 text-foreground">{employment.position}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Date of Joining</span>
-              <span className="font-medium text-gray-900">{formatDate(employment.dateOfJoining)}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Join Date</label>
+              <p className="mt-1 text-foreground">{formatDate(employment.joinDate)}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Status</span>
-              <span className="font-medium text-gray-900">{employment.status}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <p className="mt-1">
+                <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${employment.status === 'Active'
+                    ? 'bg-green-50 text-green-700 border-green-200'
+                    : 'bg-gray-50 text-gray-700 border-gray-200'
+                  }`}>
+                  {employment.status}
+                </span>
+              </p>
             </div>
-          </div>
+          </CardContent>
         </Card>
 
         {/* Bank Details */}
-        <Card title="Bank Details">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Account Holder</span>
-              <span className="font-medium text-gray-900">{bankDetails.accountHolderName}</span>
+        <Card className="border lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Bank Details
+            </CardTitle>
+            <CardDescription>Your payment information</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Bank Name</label>
+              <p className="mt-1 text-foreground">{bankDetails.bankName}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Account Number</span>
-              <span className="font-medium text-gray-900">{bankDetails.accountNumber}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Account Number</label>
+              <p className="mt-1 text-foreground font-mono">****{bankDetails.accountNumber?.slice(-4)}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">IFSC Code</span>
-              <span className="font-medium text-gray-900">{bankDetails.ifscCode}</span>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">IFSC Code</label>
+              <p className="mt-1 text-foreground font-mono">{bankDetails.ifscCode}</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Bank Name</span>
-              <span className="font-medium text-gray-900">{bankDetails.bankName}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Security */}
-        <Card title="Security">
-          <p className="text-sm text-gray-600 mb-4">Manage your password and account security</p>
-          <Button 
-            variant="primary" 
-            size="sm" 
-            className="w-full"
-            onClick={() => setShowPasswordModal(true)}
-          >
-            Change Password
-          </Button>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Change Password Modal */}
-      <Modal
-        isOpen={showPasswordModal}
-        onClose={() => setShowPasswordModal(false)}
-        title="Change Password"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowPasswordModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" loading={loading} onClick={handleChangePassword}>
-              Update Password
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Input
-            label="Current Password"
-            type="password"
-            value={passwordForm.currentPassword}
-            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-            required
-          />
-          <Input
-            label="New Password"
-            type="password"
-            value={passwordForm.newPassword}
-            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-            required
-          />
-          <Input
-            label="Confirm New Password"
-            type="password"
-            value={passwordForm.confirmPassword}
-            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-            required
-          />
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Change Password</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowPasswordModal(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Current Password</label>
+                <input
+                  type="password"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">New Password</label>
+                <input
+                  type="password"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Confirm Password</label>
+                <input
+                  type="password"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleChangePassword} disabled={loading}>
+                  {loading ? 'Changing...' : 'Change Password'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </Modal>
+      )}
 
       {/* Edit Profile Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="Edit Contact Information"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" loading={loading} onClick={handleUpdateProfile}>
-              Save Changes
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Input
-            label="Phone Number"
-            type="tel"
-            value={editForm.phone}
-            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-            placeholder="10-digit phone number"
-          />
-          <Input
-            label="Street Address"
-            value={editForm.address.street}
-            onChange={(e) => setEditForm({ 
-              ...editForm, 
-              address: { ...editForm.address, street: e.target.value }
-            })}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="City"
-              value={editForm.address.city}
-              onChange={(e) => setEditForm({ 
-                ...editForm, 
-                address: { ...editForm.address, city: e.target.value }
-              })}
-            />
-            <Input
-              label="State"
-              value={editForm.address.state}
-              onChange={(e) => setEditForm({ 
-                ...editForm, 
-                address: { ...editForm.address, state: e.target.value }
-              })}
-            />
-          </div>
-          <Input
-            label="ZIP Code"
-            value={editForm.address.zipCode}
-            onChange={(e) => setEditForm({ 
-              ...editForm, 
-              address: { ...editForm.address, zipCode: e.target.value }
-            })}
-            placeholder="6-digit PIN code"
-          />
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Edit Profile</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Phone</label>
+                <input
+                  type="tel"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Street</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={editForm.address.street}
+                  onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, street: e.target.value } })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">City</label>
+                  <input
+                    type="text"
+                    className="w-full mt-1 px-3 py-2 border rounded-md"
+                    value={editForm.address.city}
+                    onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, city: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">State</label>
+                  <input
+                    type="text"
+                    className="w-full mt-1 px-3 py-2 border rounded-md"
+                    value={editForm.address.state}
+                    onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, state: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">ZIP Code</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={editForm.address.zipCode}
+                  onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, zipCode: e.target.value } })}
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateProfile} disabled={loading}>
+                  {loading ? 'Updating...' : 'Update Profile'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </Modal>
+      )}
     </PageContainer>
   );
 };

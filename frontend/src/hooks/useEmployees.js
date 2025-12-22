@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getEmployees, getEmployeeById, getEmployeeStats } from '@/api/employeeApi';
-import toast from 'react-hot-toast';
+import { message } from 'antd';
 
 export const useEmployees = (filters = {}) => {
   const [employees, setEmployees] = useState([]);
@@ -17,14 +17,14 @@ export const useEmployees = (filters = {}) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getEmployees(filters);
       setEmployees(response.data.data);
       setPagination(response.data.pagination);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch employees';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch employees';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -34,12 +34,12 @@ export const useEmployees = (filters = {}) => {
     fetchEmployees();
   }, [JSON.stringify(filters)]);
 
-  return { 
-    employees, 
-    loading, 
-    error, 
+  return {
+    employees,
+    loading,
+    error,
     pagination,
-    refetch: fetchEmployees 
+    refetch: fetchEmployees
   };
 };
 
@@ -58,13 +58,13 @@ export const useEmployee = (id) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await getEmployeeById(id);
         setEmployee(response.data.data);
       } catch (err) {
-        const message = err.response?.data?.message || 'Failed to fetch employee';
-        setError(message);
-        toast.error(message);
+        const errorMsg = err.response?.data?.message || 'Failed to fetch employee';
+        setError(errorMsg);
+        message.error(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -85,13 +85,13 @@ export const useEmployeeStats = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getEmployeeStats();
       setStats(response.data.data);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to fetch stats';
-      setError(message);
-      toast.error(message);
+      const errorMsg = err.response?.data?.message || 'Failed to fetch stats';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
