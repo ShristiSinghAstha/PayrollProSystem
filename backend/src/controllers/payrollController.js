@@ -22,41 +22,69 @@ const getPerformedBy = (req) => ({
 });
 
 export const processMonthlyPayroll = asyncHandler(async (req, res) => {
-    const { month, year } = req.body;
+    let { month, year } = req.body;
+
+    // Handle both formats: numeric month (12) OR "YYYY-MM" string
+    if (typeof month === 'string' && month.includes('-')) {
+        const [y, m] = month.split('-');
+        year = parseInt(y, 10);
+        month = parseInt(m, 10);
+    } else {
+        month = parseInt(month, 10);
+        year = parseInt(year, 10);
+    }
 
     const monthStr = `${year}-${String(month).padStart(2, '0')}`;
-    const monthNum = parseInt(month);
-    if (monthNum < 1 || monthNum > 12) {
-        throw new AppError('Month must be between 1 and 12', 400);
-    }
 
-    const existingPayroll = await Payroll.findOne({ month: monthStr });
-    if (existingPayroll) {
-        throw new AppError(`Payroll for ${monthStr} has already been processed`, 409);
-    }
-
+    // Fetch all active employees
     const activeEmployees = await Employee.find({ 'employment.status': 'Active' });
 
     if (activeEmployees.length === 0) {
         throw new AppError('No active employees found', 404);
     }
 
+    // Check which employees already have payroll for this month
+    const existingPayrolls = await Payroll.find({ month: monthStr }).distinct('employeeId');
+
+    // Filter to only process employees who DON'T have payroll yet
+    const employeesToProcess = activeEmployees.filter(emp =>
+        !existingPayrolls.some(existingId => existingId.equals(emp._id))
+    );
+
+    if (employeesToProcess.length === 0) {
+        throw new AppError(
+            `Payroll for ${monthStr} has already been processed for all active employees`,
+            409
+        );
+    }
+
     const payrollRecords = [];
     const errors = [];
 
-    for (const employee of activeEmployees) {
+    for (const employee of employeesToProcess) {
         try {
-            const salaryBreakdown = calculateSalary(employee.salaryStructure);
+            // Get LOP days for this month from Leave model
+            const Leave = (await import('../models/Leave.js')).default;
+            const lopDays = await Leave.getLOPDaysForMonth(employee._id, year, month);
+
+            // Calculate salary with LOP deduction
+            const salaryBreakdown = calculateSalary(employee.salaryStructure, { lopDays });
 
             const payroll = await Payroll.create({
                 employeeId: employee._id,
                 month: monthStr,
-                year: parseInt(year),
+                year: year,
                 earnings: salaryBreakdown.earnings,
                 deductions: salaryBreakdown.deductions,
                 netSalary: salaryBreakdown.netSalary,
                 status: 'Pending',
-                processedAt: new Date()
+                processedAt: new Date(),
+                adjustments: lopDays > 0 ? [{
+                    type: 'LOP',
+                    amount: salaryBreakdown.deductions.lop,
+                    reason: `${lopDays} day(s) Leave without Pay`,
+                    appliedBy: 'SYSTEM'
+                }] : []
             });
 
             await logPayrollProcess(payroll._id, getPerformedBy(req), getAuditMetadata(req));
@@ -79,6 +107,7 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
             month: monthStr,
             totalProcessed: payrollRecords.length,
             totalErrors: errors.length,
+            skippedExisting: existingPayrolls.length,
             payrollRecords,
             errors: errors.length > 0 ? errors : undefined
         }
@@ -217,7 +246,7 @@ export const approvePayroll = asyncHandler(async (req, res) => {
 
 export const markAsPaid = asyncHandler(async (req, res) => {
     const payroll = await Payroll.findById(req.params.id)
-        .populate('employeeId', 'employeeId personalInfo bankDetails');
+        .populate('employeeId', 'employeeId personalInfo employment bankDetails');
 
     if (!payroll) {
         throw new AppError('Payroll record not found', 404);
@@ -227,27 +256,77 @@ export const markAsPaid = asyncHandler(async (req, res) => {
         throw new AppError('Payroll must be approved before payment', 400);
     }
 
-    const transactionId = `TXN-${Date.now()}-${payroll.employeeId.employeeId}`;
-    payroll.markAsPaid(transactionId);
-    await payroll.save();
+    const originalStatus = payroll.status;
 
-    res.status(200).json({
-        success: true,
-        message: 'Payment processed successfully',
-        data: {
-            payrollId: payroll._id,
-            employeeId: payroll.employeeId.employeeId,
-            employeeName: `${payroll.employeeId.personalInfo.firstName} ${payroll.employeeId.personalInfo.lastName}`,
-            amount: payroll.netSalary,
-            transactionId: payroll.transactionId,
-            paidAt: payroll.paidAt,
-            bankDetails: {
-                accountNumber: '****' + payroll.employeeId.bankDetails.accountNumber.slice(-4),
-                bankName: payroll.employeeId.bankDetails.bankName,
-                ifscCode: payroll.employeeId.bankDetails.ifscCode
-            }
+    try {
+        // Step 1: Generate PDF FIRST
+        const pdfBuffer = await generatePayslipPDF(payroll, payroll.employeeId);
+        const filename = `${payroll.employeeId.employeeId}-${payroll.month}`;
+        const payslipUrl = await uploadPDFToCloudinary(pdfBuffer, filename);
+
+        // Step 2: Mark as paid ONLY after PDF is ready
+        const transactionId = `TXN-${Date.now()}-${payroll.employeeId.employeeId}`;
+        payroll.markAsPaid(transactionId);
+        payroll.payslipUrl = payslipUrl;
+        payroll.payslipGenerated = true;
+        payroll.payslipGeneratedAt = new Date();
+        await payroll.save();
+
+        // Step 3: Send email (non-critical)
+        const emailResult = await sendPayslipEmail(
+            payroll.employeeId.personalInfo.email,
+            `${payroll.employeeId.personalInfo.firstName} ${payroll.employeeId.personalInfo.lastName}`,
+            payslipUrl,
+            payroll
+        );
+
+        if (emailResult.success) {
+            payroll.notificationSent = true;
+            payroll.notificationSentAt = new Date();
+            await payroll.save();
         }
-    });
+
+        // Step 4: Create notification (non-critical)
+        try {
+            await createPayslipNotification(
+                payroll.employeeId._id,
+                payslipUrl,
+                payroll.month,
+                payroll.netSalary
+            );
+        } catch (notifError) {
+            console.error('Notification creation failed:', notifError.message);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Payment processed successfully',
+            data: {
+                payrollId: payroll._id,
+                employeeId: payroll.employeeId.employeeId,
+                employeeName: `${payroll.employeeId.personalInfo.firstName} ${payroll.employeeId.personalInfo.lastName}`,
+                amount: payroll.netSalary,
+                transactionId: payroll.transactionId,
+                paidAt: payroll.paidAt,
+                payslipUrl,
+                emailSent: emailResult.success,
+                bankDetails: {
+                    accountNumber: '****' + payroll.employeeId.bankDetails.accountNumber.slice(-4),
+                    bankName: payroll.employeeId.bankDetails.bankName,
+                    ifscCode: payroll.employeeId.bankDetails.ifscCode
+                }
+            }
+        });
+
+    } catch (error) {
+        // Rollback: Restore original status
+        payroll.status = originalStatus;
+        payroll.payslipUrl = null;
+        payroll.payslipGenerated = false;
+        await payroll.save();
+
+        throw new AppError(`Payment failed: ${error.message}`, 500);
+    }
 });
 
 export const approveAllForMonth = asyncHandler(async (req, res) => {
@@ -307,11 +386,27 @@ export const getPayrollStats = asyncHandler(async (req, res) => {
         { $limit: 6 }
     ]);
 
+    const current = month || (monthlyStats[0]?._id);
+    const currentMonthStats = monthlyStats.find(m => m._id === current) || monthlyStats[0] || {};
+    const statusMap = stats.reduce((acc, s) => {
+        acc[s._id] = s.count;
+        return acc;
+    }, {});
+
     res.status(200).json({
         success: true,
         data: {
             byStatus: stats,
-            byMonth: monthlyStats
+            byMonth: monthlyStats,
+            currentMonth: current || null,
+            currentMonthGross: currentMonthStats.totalGross || 0,
+            currentMonthDeductions: currentMonthStats.totalDeductions || 0,
+            currentMonthNet: currentMonthStats.totalNet || 0,
+            pending: statusMap.Pending || 0,
+            approved: statusMap.Approved || 0,
+            paid: statusMap.Paid || 0,
+            failed: statusMap.Failed || 0,
+            employeesProcessed: currentMonthStats.totalEmployees || 0
         }
     });
 });
@@ -319,9 +414,9 @@ export const getPayrollStats = asyncHandler(async (req, res) => {
 export const bulkPayAndGeneratePayslips = asyncHandler(async (req, res) => {
     const { month } = req.params;
 
-    const approvedPayrolls = await Payroll.find({ 
-        month, 
-        status: 'Approved' 
+    const approvedPayrolls = await Payroll.find({
+        month,
+        status: 'Approved'
     }).populate('employeeId');
 
     if (approvedPayrolls.length === 0) {
@@ -337,21 +432,23 @@ export const bulkPayAndGeneratePayslips = asyncHandler(async (req, res) => {
 
     for (const payroll of approvedPayrolls) {
         const employee = payroll.employeeId;
-        
-        try {
-            const transactionId = `TXN-${Date.now()}-${employee.employeeId}`;
-            payroll.markAsPaid(transactionId);
-            await payroll.save();
+        const originalStatus = payroll.status; // Store original status
 
+        try {
+            // Step 1: Generate PDF FIRST (before marking as paid)
             const pdfBuffer = await generatePayslipPDF(payroll, employee);
             const filename = `${employee.employeeId}-${month}`;
             const payslipUrl = await uploadPDFToCloudinary(pdfBuffer, filename);
 
+            // Step 2: Mark as paid ONLY after PDF is ready
+            const transactionId = `TXN-${Date.now()}-${employee.employeeId}`;
+            payroll.markAsPaid(transactionId);
             payroll.payslipUrl = payslipUrl;
             payroll.payslipGenerated = true;
             payroll.payslipGeneratedAt = new Date();
             await payroll.save();
 
+            // Step 3: Send email (non-critical, can fail)
             const emailResult = await sendPayslipEmail(
                 employee.personalInfo.email,
                 `${employee.personalInfo.firstName} ${employee.personalInfo.lastName}`,
@@ -365,12 +462,18 @@ export const bulkPayAndGeneratePayslips = asyncHandler(async (req, res) => {
                 await payroll.save();
             }
 
-            await createPayslipNotification(
-                employee._id,
-                payslipUrl,
-                month,
-                payroll.netSalary
-            );
+            // Step 4: Create in-app notification (non-critical)
+            try {
+                await createPayslipNotification(
+                    employee._id,
+                    payslipUrl,
+                    month,
+                    payroll.netSalary
+                );
+            } catch (notifError) {
+                console.error('Notification creation failed:', notifError.message);
+                // Continue anyway, notification failure is not critical
+            }
 
             await logPayrollApproval(payroll, getPerformedBy(req), getAuditMetadata(req));
 
@@ -384,6 +487,12 @@ export const bulkPayAndGeneratePayslips = asyncHandler(async (req, res) => {
             });
 
         } catch (error) {
+            // Rollback: Restore original status if any step failed
+            payroll.status = originalStatus;
+            payroll.payslipUrl = null;
+            payroll.payslipGenerated = false;
+            await payroll.save();
+
             results.failed++;
             results.details.push({
                 employeeId: employee.employeeId,
@@ -398,5 +507,59 @@ export const bulkPayAndGeneratePayslips = asyncHandler(async (req, res) => {
         success: true,
         message: `Bulk payment completed: ${results.successful} successful, ${results.failed} failed`,
         data: results
+    });
+});
+
+export const getMonthlyPayrollSummary = asyncHandler(async (req, res) => {
+    const summaries = await Payroll.aggregate([
+        {
+            $group: {
+                _id: '$month',
+                totalEmployees: { $sum: 1 },
+                totalNet: { $sum: '$netSalary' },
+                statusBreakdown: {
+                    $push: '$status'
+                },
+                latestUpdate: { $max: '$updatedAt' }
+            }
+        },
+        {
+            $project: {
+                month: '$_id',
+                totalEmployees: 1,
+                totalNet: 1,
+                pending: {
+                    $size: {
+                        $filter: {
+                            input: '$statusBreakdown',
+                            cond: { $eq: ['$$this', 'Pending'] }
+                        }
+                    }
+                },
+                approved: {
+                    $size: {
+                        $filter: {
+                            input: '$statusBreakdown',
+                            cond: { $eq: ['$$this', 'Approved'] }
+                        }
+                    }
+                },
+                paid: {
+                    $size: {
+                        $filter: {
+                            input: '$statusBreakdown',
+                            cond: { $eq: ['$$this', 'Paid'] }
+                        }
+                    }
+                },
+                updatedAt: '$latestUpdate'
+            }
+        },
+        { $sort: { month: -1 } }
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: summaries
     });
 });

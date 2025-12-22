@@ -14,11 +14,11 @@ router.use(protect);
 
 // Employee routes
 router.get('/me', getMyPayslips);
+router.get('/status/:month', restrictTo('admin'), getPayslipStatus);
 router.get('/:id', getPayslipById);
 router.get('/:id/download', downloadPayslip);
 
 // Admin routes
 router.post('/:id/resend', restrictTo('admin'), resendPayslipEmail);
-router.get('/status/:month', restrictTo('admin'), getPayslipStatus);
 
 export default router;

@@ -9,7 +9,8 @@ import {
     markAsPaid,
     approveAllForMonth,
     getPayrollStats,
-    bulkPayAndGeneratePayslips
+    bulkPayAndGeneratePayslips,
+    getMonthlyPayrollSummary
 } from '../controllers/payrollController.js';
 import { payrollValidation } from '../middlewares/validator.js';
 import { protect, restrictTo } from '../middlewares/auth.js';
@@ -23,6 +24,7 @@ router.get('/stats', getPayrollStats);
 router.post('/process', payrollValidation.process, processMonthlyPayroll);
 router.post('/bulk-approve/:month', approveAllForMonth);
 
+router.get('/summary', getMonthlyPayrollSummary);
 router.get('/', getPayrollRecords);
 router.get('/month/:month', getPayrollByMonth);
 router.get('/:id', payrollValidation.getById, getPayrollById);
