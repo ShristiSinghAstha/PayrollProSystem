@@ -1,19 +1,7 @@
-import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
+import BaseLayout from './BaseLayout';
 
-const EmployeeLayout = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="ml-64">
-        <TopBar />
-        <main className="pt-16">
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  );
-};
+// EmployeeLayout is now just an alias for BaseLayout
+// This maintains the same import structure while eliminating code duplication
+const EmployeeLayout = BaseLayout;
 
 export default EmployeeLayout;

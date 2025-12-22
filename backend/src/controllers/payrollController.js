@@ -516,6 +516,7 @@ export const getMonthlyPayrollSummary = asyncHandler(async (req, res) => {
             $group: {
                 _id: '$month',
                 totalEmployees: { $sum: 1 },
+                totalNet: { $sum: '$netSalary' },
                 statusBreakdown: {
                     $push: '$status'
                 },
@@ -526,6 +527,7 @@ export const getMonthlyPayrollSummary = asyncHandler(async (req, res) => {
             $project: {
                 month: '$_id',
                 totalEmployees: 1,
+                totalNet: 1,
                 pending: {
                     $size: {
                         $filter: {

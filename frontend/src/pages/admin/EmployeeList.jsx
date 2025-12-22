@@ -1,58 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Table,
-  Button,
-  Input,
-  Select,
-  Tag,
-  Space,
-  Card,
-  Row,
-  Col,
-  Typography,
-  Tooltip,
-  message
-} from 'antd';
-import {
-  PlusOutlined,
-  SearchOutlined,
-  EditOutlined,
-  EyeOutlined,
-  ReloadOutlined,
-  UserOutlined,
-  TeamOutlined,
-  UploadOutlined,
-  DownloadOutlined,
-  FileExcelOutlined
-} from '@ant-design/icons';
-import { Upload, Modal } from 'antd';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, Search, Eye, Edit2, RefreshCw, Upload, Download, Users, Building2 } from "lucide-react";
 import PageContainer from '@/components/layout/PageContainer';
 import { useEmployees } from '@/hooks/useEmployees';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { DEPARTMENTS } from '@/utils/constants';
+import { message } from 'antd';
+import { cn } from '@/lib/utils';
 import axios from '@/api/axios';
-
-const { Title, Text } = Typography;
-const { Option } = Select;
 
 const EmployeeList = () => {
   const navigate = useNavigate();
   const [filters, setFilters] = useState({ search: '', department: '', status: '' });
-  const [tablePagination, setTablePagination] = useState({ current: 1, pageSize: 10 });
-  const [importModal, setImportModal] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [fileList, setFileList] = useState([]);
-  const { employees, loading, refetch, pagination } = useEmployees({ ...filters, page: tablePagination.current, limit: tablePagination.pageSize });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const { employees, loading, refetch } = useEmployees({ ...filters, page: pagination.current, limit: pagination.pageSize });
 
   const getStatusColor = (status) => {
     const colors = {
-      'Active': 'success',
-      'Inactive': 'default',
-      'Terminated': 'error',
-      'Resigned': 'warning'
+      'Active': 'bg-green-50 text-green-700 border-green-200',
+      'Inactive': 'bg-gray-50 text-gray-700 border-gray-200',
+      'Terminated': 'bg-red-50 text-red-700 border-red-200',
+      'Resigned': 'bg-yellow-50 text-yellow-700 border-yellow-200'
     };
-    return colors[status] || 'default';
+    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const calculateGrossSalary = (salaryStructure) => {
@@ -63,169 +35,9 @@ const EmployeeList = () => {
       (salaryStructure.otherAllowances || 0);
   };
 
-  const columns = [
-    {
-      title: 'Employee ID',
-      dataIndex: 'employeeId',
-      key: 'employeeId',
-      width: 130,
-      fixed: 'left',
-      sorter: (a, b) => a.employeeId.localeCompare(b.employeeId),
-      render: (text) => (
-        <Text strong style={{ color: '#1890ff' }}>
-          {text}
-        </Text>
-      ),
-    },
-    {
-      title: 'Name',
-      key: 'name',
-      width: 200,
-      sorter: (a, b) => {
-        const nameA = `${a.personalInfo.firstName} ${a.personalInfo.lastName}`;
-        const nameB = `${b.personalInfo.firstName} ${b.personalInfo.lastName}`;
-        return nameA.localeCompare(nameB);
-      },
-      render: (_, record) => (
-        <Space>
-          <UserOutlined style={{ color: '#1890ff' }} />
-          <div>
-            <Text strong>
-              {record.personalInfo.firstName} {record.personalInfo.lastName}
-            </Text>
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.personalInfo.email}
-            </Text>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: 'Department',
-      dataIndex: ['employment', 'department'],
-      key: 'department',
-      width: 140,
-      filters: DEPARTMENTS.map(dept => ({ text: dept, value: dept })),
-      onFilter: (value, record) => record.employment.department === value,
-      render: (dept) => (
-        <Tag color="blue" icon={<TeamOutlined />}>
-          {dept}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Designation',
-      dataIndex: ['employment', 'designation'],
-      key: 'designation',
-      width: 160,
-      ellipsis: true,
-    },
-    {
-      title: 'Gross Salary',
-      key: 'salary',
-      width: 140,
-      align: 'right',
-      sorter: (a, b) => calculateGrossSalary(a.salaryStructure) - calculateGrossSalary(b.salaryStructure),
-      render: (_, record) => (
-        <Text strong style={{ color: '#52c41a' }}>
-          {formatCurrency(calculateGrossSalary(record.salaryStructure))}
-        </Text>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: ['employment', 'status'],
-      key: 'status',
-      width: 110,
-      filters: [
-        { text: 'Active', value: 'Active' },
-        { text: 'Inactive', value: 'Inactive' },
-        { text: 'Terminated', value: 'Terminated' },
-        { text: 'Resigned', value: 'Resigned' },
-      ],
-      onFilter: (value, record) => record.employment.status === value,
-      render: (status) => (
-        <Tag color={getStatusColor(status)}>
-          {status.toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Joined',
-      dataIndex: ['employment', 'dateOfJoining'],
-      key: 'dateOfJoining',
-      width: 120,
-      sorter: (a, b) => new Date(a.employment.dateOfJoining) - new Date(b.employment.dateOfJoining),
-      render: (date) => formatDate(date),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 120,
-      fixed: 'right',
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="View Details">
-            <Button
-              type="primary"
-              icon={<EyeOutlined />}
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/admin/employees/${record._id}`);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="Edit">
-            <Button
-              icon={<EditOutlined />}
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/admin/employees/${record._id}`);
-              }}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
-  const handleTableChange = (pag, filters, sorter) => {
-    setTablePagination({
-      current: pag.current,
-      pageSize: pag.pageSize,
-    });
-  };
-
-  const handleRefresh = () => {
-    refetch();
-    message.success('Data refreshed successfully');
-  };
-
-  const handleDownloadTemplate = async () => {
-    try {
-      const response = await axios.get('/api/bulk/employees/template', {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'employee-import-template.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      message.success('Template downloaded successfully');
-    } catch (error) {
-      message.error('Failed to download template');
-    }
-  };
-
-  const handleExport = async () => {
+  const handleExportEmployees = async () => {
     try {
       const response = await axios.get('/api/bulk/employees/export', {
-        params: { department: filters.department, status: filters.status },
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -241,217 +53,196 @@ const EmployeeList = () => {
     }
   };
 
-  const handleImport = async () => {
-    if (fileList.length === 0) {
-      message.error('Please select a file to upload');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', fileList[0]);
-
-    try {
-      setUploading(true);
-      const response = await axios.post('/api/bulk/employees/import', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      const { data } = response.data;
-      message.success(`Successfully imported ${data.successful} employees`);
-
-      if (data.errors.length > 0) {
-        Modal.warning({
-          title: 'Import completed with errors',
-          content: `${data.successful} employees imported successfully. ${data.failed} failed. Check console for details.`,
-          width: 600
-        });
-        console.error('Import errors:', data.errors);
-      }
-
-      setImportModal(false);
-      setFileList([]);
-      refetch();
-    } catch (error) {
-      message.error(error.response?.data?.message || 'Failed to import employees');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const uploadProps = {
-    beforeUpload: (file) => {
-      const isCSV = file.type === 'text/csv' || file.name.endsWith('.csv') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      if (!isCSV) {
-        message.error('You can only upload CSV or Excel files!');
-        return false;
-      }
-      setFileList([file]);
-      return false;
-    },
-    fileList,
-    onRemove: () => {
-      setFileList([]);
-    },
-    maxCount: 1,
-  };
-
   return (
     <PageContainer>
-      <div style={{ marginBottom: 24 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              Employees
-            </Title>
-            <Text type="secondary">Manage employee records and information</Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                icon={<DownloadOutlined />}
-                onClick={handleDownloadTemplate}
-              >
-                Download Template
-              </Button>
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportModal(true)}
-              >
-                Import
-              </Button>
-              <Button
-                icon={<FileExcelOutlined />}
-                onClick={handleExport}
-              >
-                Export
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                size="large"
-                onClick={() => navigate('/admin/employees/new')}
-              >
-                Add Employee
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+      {/* Header */}
+      <div className="border-b bg-card mb-8" style={{ margin: '-24px -24px 32px -24px', padding: '40px 32px' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Employees</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Manage your organization's workforce</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleExportEmployees} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Upload className="h-4 w-4" />
+              Import
+            </Button>
+            <Button onClick={() => navigate('/admin/employees/new')} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Employee
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        {/* Filters */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={24} md={10} lg={8}>
-            <Input
-              placeholder="Search by name, email, or employee ID"
-              prefix={<SearchOutlined />}
-              value={filters.search}
-              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              allowClear
-              size="large"
-            />
-          </Col>
-          <Col xs={12} sm={12} md={6} lg={5}>
-            <Select
-              placeholder="Department"
-              style={{ width: '100%' }}
-              value={filters.department || undefined}
-              onChange={(value) => setFilters((prev) => ({ ...prev, department: value || '' }))}
-              allowClear
-              size="large"
-            >
-              {DEPARTMENTS.map((dept) => (
-                <Option key={dept} value={dept}>
-                  {dept}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={12} sm={12} md={6} lg={5}>
-            <Select
-              placeholder="Status"
-              style={{ width: '100%' }}
-              value={filters.status || undefined}
-              onChange={(value) => setFilters((prev) => ({ ...prev, status: value || '' }))}
-              allowClear
-              size="large"
-            >
-              <Option value="Active">Active</Option>
-              <Option value="Inactive">Inactive</Option>
-              <Option value="Terminated">Terminated</Option>
-              <Option value="Resigned">Resigned</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={24} md={2} lg={6} style={{ textAlign: 'right' }}>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleRefresh}
-              size="large"
-            >
-              Refresh
-            </Button>
-          </Col>
-        </Row>
-
-        {/* Table */}
-        <Table
-          columns={columns}
-          dataSource={employees}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            current: tablePagination.current,
-            pageSize: tablePagination.pageSize,
-            total: pagination?.total || 0,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} employees`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: 1200 }}
-          onRow={(record) => ({
-            style: { cursor: 'pointer' },
-            onClick: () => navigate(`/admin/employees/${record._id}`),
-          })}
-        />
+      {/* Filters */}
+      <Card className="border mb-6">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by name, ID, or email..."
+                  className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Department</label>
+              <select
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filters.department}
+                onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+              >
+                <option value="">All Departments</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
+              <select
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              >
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Terminated">Terminated</option>
+                <option value="Resigned">Resigned</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={refetch}
+                className="w-full gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Import Modal */}
-      <Modal
-        title="Import Employees"
-        open={importModal}
-        onCancel={() => {
-          setImportModal(false);
-          setFileList([]);
-        }}
-        onOk={handleImport}
-        confirmLoading={uploading}
-        okText={uploading ? 'Uploading...' : 'Import'}
-        width={600}
-      >
-        <div style={{ marginBottom: 16 }}>
-          <Text>Upload a CSV or Excel file to import multiple employees at once.</Text>
-        </div>
+      {/* Employee Table */}
+      <Card className="border">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">All Employees</CardTitle>
+          <CardDescription>Total {employees?.length || 0} employees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b">
+                <tr>
+                  <th className="px-6 py-3">Employee ID</th>
+                  <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3">Department</th>
+                  <th className="px-6 py-3">Position</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Gross Salary</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees?.map((employee) => (
+                  <tr key={employee._id} className="border-b hover:bg-accent/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-primary">{employee.employeeId}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {employee.personalInfo.firstName} {employee.personalInfo.lastName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {employee.personalInfo.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-foreground">{employee.employment.department}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-foreground">{employee.employment.position}</td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+                        getStatusColor(employee.employment.status)
+                      )}>
+                        {employee.employment.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-medium text-foreground">
+                      {formatCurrency(calculateGrossSalary(employee.salaryStructure))}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/admin/employees/${employee._id}/view`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/admin/employees/${employee._id}/edit`)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-        <Upload.Dragger {...uploadProps}>
-          <p className="ant-upload-drag-icon">
-            <UploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-          </p>
-          <p className="ant-upload-text">Click or drag file to this area to upload</p>
-          <p className="ant-upload-hint">
-            Support for CSV or Excel files. Maximum file size: 5MB
-          </p>
-        </Upload.Dragger>
+            {/* Empty State */}
+            {employees?.length === 0 && !loading && (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="rounded-full bg-muted p-6">
+                  <Users className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">No employees found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first employee</p>
+                <Button className="mt-6 gap-2" onClick={() => navigate('/admin/employees/new')}>
+                  <Plus className="h-4 w-4" />
+                  Add Employee
+                </Button>
+              </div>
+            )}
 
-        <div style={{ marginTop: 16 }}>
-          <Text type="secondary">
-            Don't have a template?{' '}
-            <Button type="link" onClick={handleDownloadTemplate} style={{ padding: 0 }}>
-              Download Template
-            </Button>
-          </Text>
-        </div>
-      </Modal>
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center py-16">
+                <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 };

@@ -1,198 +1,159 @@
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { motion } from 'framer-motion';
-import { Form, Input, Button, Card, Typography, message } from 'antd';
-import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
 import { useAuth } from '@/contexts/AuthContext';
 
-const { Title, Text, Paragraph } = Typography;
-
 const Login = () => {
+  const navigate = useNavigate();
   const { login } = useAuth();
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (values) => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!credentials.email || !credentials.password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(values);
-      message.success('Login successful! Welcome back.');
+      await login(credentials);
+      navigate('/admin/dashboard');
     } catch (error) {
-      message.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      setError(error.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '20px',
-      }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ width: '100%', maxWidth: 450 }}
+        className="w-full max-w-md"
       >
-        {/* Logo Section */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-          style={{ textAlign: 'center', marginBottom: 32 }}
-        >
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              background: 'white',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-            }}
+        {/* Logo/Brand */}
+        <div className="text-center mb-8">
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
           >
-            <LoginOutlined style={{ fontSize: 36, color: '#667eea' }} />
-          </div>
-          <Title level={1} style={{ color: 'white', margin: 0, fontSize: 36 }}>
-            PayrollPro
-          </Title>
-          <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 16 }}>
-            Professional Payroll Management
-          </Text>
-        </motion.div>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-700 text-white mb-4 shadow-lg">
+              <span className="text-2xl font-bold">P</span>
+            </div>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">PayrollPro</h1>
+            <p className="text-slate-600">Sign in to your account</p>
+          </motion.div>
+        </div>
 
         {/* Login Card */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card
-            style={{
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              borderRadius: 16,
-              border: 'none',
-            }}
-          >
-            <Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
-              Welcome Back
-            </Title>
-            <Paragraph
-              style={{ textAlign: 'center', color: '#8c8c8c', marginBottom: 32 }}
-            >
-              Sign in to access your dashboard
-            </Paragraph>
-
-            <Form
-              form={form}
-              name="login"
-              onFinish={handleSubmit}
-              layout="vertical"
-              size="large"
-              requiredMark={false}
-            >
-              <Form.Item
-                name="email"
-                rules={[
-                  { required: true, message: 'Please enter your email' },
-                  { type: 'email', message: 'Please enter a valid email' },
-                ]}
-              >
-                <Input
-                  prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
-                  placeholder="Email Address"
-                  autoComplete="email"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="password"
-                rules={[
-                  { required: true, message: 'Please enter your password' },
-                  { min: 6, message: 'Password must be at least 6 characters' },
-                ]}
-              >
-                <Input.Password
-                  prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
-                  placeholder="Password"
-                  autoComplete="current-password"
-                />
-              </Form.Item>
-
-              <div style={{ textAlign: 'right', marginBottom: 24 }}>
-                <a
-                  href="/forgot-password"
-                  style={{ color: '#667eea', fontWeight: 500 }}
+        <Card className="border-2 shadow-xl bg-white">
+          <CardContent className="pt-6 pb-8 px-8">
+            <form onSubmit={handleLogin} className="space-y-5">
+              {/* Error Message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg"
                 >
-                  Forgot Password?
-                </a>
+                  <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </motion.div>
+              )}
+
+              {/* Email Field */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all hover:border-slate-300"
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                    disabled={loading}
+                  />
+                </div>
               </div>
 
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  block
-                  size="large"
-                  icon={<LoginOutlined />}
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    border: 'none',
-                    height: 48,
-                    fontSize: 16,
-                    fontWeight: 600,
-                  }}
-                >
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </Button>
-              </Form.Item>
-            </Form>
+              {/* Password Field */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Password
+                  </label>
+                  <Link to="/forgot-password" className="text-sm text-slate-600 hover:text-slate-900 hover:underline transition-colors">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-12 py-3 border-2 border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all hover:border-slate-300"
+                    value={credentials.password}
+                    onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Login Button */}
+              <Button
+                type="submit"
+                className="w-full py-6 text-base font-semibold shadow-md hover:shadow-lg"
+                disabled={loading}
+              >
+                {loading ? 'Signing in...' : 'Sign in'}
+              </Button>
+            </form>
 
             {/* Demo Credentials */}
-            <Card
-              size="small"
-              style={{
-                marginTop: 24,
-                background: '#f5f5f5',
-                border: '1px dashed #d9d9d9',
-              }}
-            >
-              <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                🔑 Demo Credentials:
-              </Text>
-              <div style={{ fontSize: 13, lineHeight: '22px' }}>
-                <div>
-                  <Text strong>Admin:</Text> admin@payrollpro.com / admin123
-                </div>
-                <div>
-                  <Text strong>Employee:</Text> employee@payrollpro.com / emp123
-                </div>
+            <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <p className="text-xs text-slate-600 mb-2 font-semibold">Demo Credentials:</p>
+              <div className="space-y-1.5 text-xs">
+                <p className="text-slate-700 font-mono">
+                  <span className="font-semibold text-slate-900">Admin:</span> admin@payrollpro.com / admin123
+                </p>
+                <p className="text-slate-700 font-mono">
+                  <span className="font-semibold text-slate-900">Employee:</span> employee@payrollpro.com / employee123
+                </p>
               </div>
-            </Card>
-          </Card>
-        </motion.div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          style={{ textAlign: 'center', marginTop: 24 }}
-        >
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-            © 2024 PayrollPro. All rights reserved.
-          </Text>
-        </motion.div>
+        <p className="text-center text-sm text-slate-500 mt-6">
+          © 2025 PayrollPro. All rights reserved.
+        </p>
       </motion.div>
     </div>
   );

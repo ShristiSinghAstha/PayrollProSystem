@@ -1,4 +1,4 @@
-import Badge from '@/components/common/Badge';
+import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/utils/formatters';
 
 const NotificationItem = ({ notification, onClick }) => {
@@ -18,9 +18,14 @@ const NotificationItem = ({ notification, onClick }) => {
           <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Badge variant={isRead ? 'default' : 'info'} size="sm">
+          <span className={cn(
+            "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+            isRead
+              ? "bg-gray-50 text-gray-700 border-gray-200"
+              : "bg-blue-50 text-blue-700 border-blue-200"
+          )}>
             {isRead ? 'Read' : 'Unread'}
-          </Badge>
+          </span>
           <p className="text-xs text-gray-500">{formatRelativeTime(notification.createdAt)}</p>
         </div>
       </div>

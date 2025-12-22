@@ -1,156 +1,146 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Form, Input, Button, Card, Typography, Result, message } from 'antd';
-import { LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
-import axios from '../api/axios';
-
-const { Title, Text } = Typography;
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Lock, Eye, EyeOff } from "lucide-react";
+import { motion } from 'framer-motion';
+import { message } from 'antd';
+import axios from '@/api/axios';
 
 const ResetPassword = () => {
-    const [loading, setLoading] = useState(false);
-    const [resetSuccess, setResetSuccess] = useState(false);
-    const { token } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const token = searchParams.get('token');
 
-    const handleSubmit = async (values) => {
+    const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!passwords.password || !passwords.confirmPassword) {
+            message.error('Please enter both password fields');
+            return;
+        }
+
+        if (passwords.password !== passwords.confirmPassword) {
+            message.error('Passwords do not match');
+            return;
+        }
+
+        if (passwords.password.length < 6) {
+            message.error('Password must be at least 6 characters');
+            return;
+        }
+
+        setLoading(true);
         try {
-            setLoading(true);
-            const response = await axios.post(`/api/auth/reset-password/${token}`, {
-                password: values.password
+            await axios.post('/api/auth/reset-password', {
+                token,
+                password: passwords.password
             });
-
-            // Save the new token
-            if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
-            }
-
-            setResetSuccess(true);
-            message.success('Password reset successfully!');
-
-            // Redirect to login after 2 seconds
-            setTimeout(() => {
-                navigate('/login');
-            }, 2000);
+            message.success('Password reset successfully');
+            navigate('/login');
         } catch (error) {
-            message.error(error.response?.data?.message || 'Failed to reset password. Link may be expired.');
+            message.error(error.response?.data?.message || 'Failed to reset password');
         } finally {
             setLoading(false);
         }
     };
 
-    if (resetSuccess) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-            }}>
-                <Card style={{ width: '100%', maxWidth: 500, boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
-                    <Result
-                        status="success"
-                        icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                        title="Password Reset Successfully!"
-                        subTitle="Redirecting you to login page..."
-                        extra={[
-                            <Link to="/login" key="login">
-                                <Button type="primary">
-                                    Go to Login
-                                </Button>
-                            </Link>
-                        ]}
-                    />
-                </Card>
-            </div>
-        );
-    }
-
     return (
-        <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            padding: '20px'
-        }}>
-            <Card style={{ width: '100%', maxWidth: 450, boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
-                <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-                        Reset Password
-                    </Title>
-                    <Text type="secondary">
-                        Enter your new password below
-                    </Text>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="w-full max-w-md"
+            >
+                {/* Logo/Brand */}
+                <div className="text-center mb-8">
+                    <motion.div
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                    >
+                        <h1 className="text-4xl font-bold text-foreground mb-2">PayrollPro</h1>
+                        <p className="text-muted-foreground">Create a new password</p>
+                    </motion.div>
                 </div>
 
-                <Form
-                    name="reset-password"
-                    onFinish={handleSubmit}
-                    layout="vertical"
-                    size="large"
-                >
-                    <Form.Item
-                        name="password"
-                        label="New Password"
-                        rules={[
-                            { required: true, message: 'Please enter your new password' },
-                            { min: 6, message: 'Password must be at least 6 characters' }
-                        ]}
-                        hasFeedback
-                    >
-                        <Input.Password
-                            prefix={<LockOutlined className="site-form-item-icon" />}
-                            placeholder="Enter new password"
-                        />
-                    </Form.Item>
+                {/* Card */}
+                <Card className="border shadow-lg">
+                    <CardContent className="pt-6">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* New Password */}
+                            <div>
+                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                    New Password
+                                </label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="••••••••"
+                                        className="w-full pl-10 pr-12 py-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                                        value={passwords.password}
+                                        onChange={(e) => setPasswords({ ...passwords, password: e.target.value })}
+                                        disabled={loading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    </button>
+                                </div>
+                            </div>
 
-                    <Form.Item
-                        name="confirmPassword"
-                        label="Confirm Password"
-                        dependencies={['password']}
-                        hasFeedback
-                        rules={[
-                            { required: true, message: 'Please confirm your password' },
-                            ({ getFieldValue }) => ({
-                                validator(_, value) {
-                                    if (!value || getFieldValue('password') === value) {
-                                        return Promise.resolve();
-                                    }
-                                    return Promise.reject(new Error('Passwords do not match'));
-                                },
-                            }),
-                        ]}
-                    >
-                        <Input.Password
-                            prefix={<LockOutlined className="site-form-item-icon" />}
-                            placeholder="Confirm new password"
-                        />
-                    </Form.Item>
+                            {/* Confirm Password */}
+                            <div>
+                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                    Confirm Password
+                                </label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        placeholder="••••••••"
+                                        className="w-full pl-10 pr-12 py-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                                        value={passwords.confirmPassword}
+                                        onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                                        disabled={loading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    </button>
+                                </div>
+                            </div>
 
-                    <Form.Item>
-                        <Button
-                            type="primary"
-                            htmlType="submit"
-                            block
-                            loading={loading}
-                            size="large"
-                        >
-                            {loading ? 'Resetting...' : 'Reset Password'}
-                        </Button>
-                    </Form.Item>
-
-                    <div style={{ textAlign: 'center' }}>
-                        <Link to="/login">
-                            <Button type="link">
-                                Back to Login
+                            {/* Submit Button */}
+                            <Button
+                                type="submit"
+                                className="w-full py-6 text-base font-medium"
+                                disabled={loading}
+                            >
+                                {loading ? 'Resetting...' : 'Reset Password'}
                             </Button>
-                        </Link>
-                    </div>
-                </Form>
-            </Card>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                {/* Footer */}
+                <p className="text-center text-sm text-muted-foreground mt-6">
+                    © 2025 PayrollPro. All rights reserved.
+                </p>
+            </motion.div>
         </div>
     );
 };

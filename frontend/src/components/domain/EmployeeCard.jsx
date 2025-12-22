@@ -1,5 +1,5 @@
-import Card from '@/components/common/Card';
-import Badge from '@/components/common/Badge';
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { formatDate } from '@/utils/formatters';
 import { DEPARTMENTS } from '@/utils/constants';
 
@@ -28,9 +28,14 @@ const EmployeeCard = ({ employee, onView, onEdit, onDeactivate }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        <Badge variant={employment.status === 'Active' ? 'success' : 'warning'}>
+        <span className={cn(
+          "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+          employment.status === 'Active'
+            ? "bg-green-50 text-green-700 border-green-200"
+            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+        )}>
           {employment.status}
-        </Badge>
+        </span>
         <div className="text-right">
           <p className="text-xs text-gray-500">Net / month</p>
           <p className="text-lg font-semibold text-gray-900">₹{salaryStructure.basicSalary}</p>

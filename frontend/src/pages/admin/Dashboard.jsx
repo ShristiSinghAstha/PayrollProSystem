@@ -1,25 +1,25 @@
-import { Row, Col, Card, Statistic, Typography, Button, Table, Tag, Space, Divider } from 'antd';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Users, UserCheck, Clock, DollarSign, Plus, TrendingUp, PieChart } from "lucide-react";
 import {
-  TeamOutlined,
-  DollarOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
-  RiseOutlined,
-  FallOutlined,
-  UserAddOutlined,
-  FileTextOutlined,
-} from '@ant-design/icons';
-import { Column, Pie } from '@ant-design/charts';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart as RechartsPie,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import CountUp from 'react-countup';
 import PageContainer from '@/components/layout/PageContainer';
 import { useEmployeeStats } from '@/hooks/useEmployees';
 import { usePayrollStats } from '@/hooks/usePayroll';
-import { formatCurrency, formatDate } from '@/utils/formatters';
-
-const { Title, Text } = Typography;
 
 // Animation variants
 const containerVariants = {
@@ -27,7 +27,7 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.05
     }
   }
 };
@@ -45,28 +45,28 @@ const cardVariants = {
 };
 
 const AdminDashboard = () => {
-  const { stats: employeeStats, loading: employeeLoading } = useEmployeeStats();
-  const { stats: payrollStats, loading: payrollLoading } = usePayrollStats({ month: undefined });
-
-  const loading = employeeLoading || payrollLoading;
-
-  // Department distribution data for pie chart
-  const departmentData = employeeStats?.byDepartment?.map(dept => ({
-    type: dept._id,
-    value: dept.count,
-  })) || [];
+  const { stats: employeeStats } = useEmployeeStats();
+  const { stats: payrollStats } = usePayrollStats({ month: undefined });
 
   // Monthly trend data
-  const monthlyTrendData = payrollStats?.byMonth?.slice(0, 6).reverse().map(month => ({
+  const monthlyPayrollData = payrollStats?.byMonth?.slice(0, 6).reverse().map(month => ({
     month: month._id,
     amount: month.totalNet,
   })) || [];
 
+  // Department distribution data
+  const departmentData = employeeStats?.byDepartment?.map(dept => ({
+    name: dept._id,
+    value: dept.count,
+    color: ['#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'][employeeStats.byDepartment.indexOf(dept)]
+  })) || [];
+
   // Recent activities
   const recentActivities = [
-    { id: 1, action: 'Payroll processed for Dec 2025', time: '2 hours ago', type: 'success' },
-    { id: 2, action: 'New employee added: John Doe', time: '5 hours ago', type: 'info' },
-    { id: 3, action: '15 payrolls approved', time: '1 day ago', type: 'success' },
+    { id: 1, action: "Payroll processed for December 2025", time: "2 hours ago" },
+    { id: 2, action: "New employee added: Sarah Johnson", time: "5 hours ago" },
+    { id: 3, action: "15 payroll records approved", time: "1 day ago" },
+    { id: 4, action: "Department budget updated", time: "2 days ago" },
   ];
 
   return (
@@ -76,329 +76,329 @@ const AdminDashboard = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ marginBottom: 24 }}
+        className="border-b bg-card mb-8"
+        style={{ margin: '-24px -24px 32px -24px', padding: '40px 32px' }}
       >
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              Admin Dashboard
-            </Title>
-            <Text type="secondary">Quick overview of employees and payroll operations</Text>
-          </Col>
-          <Col>
-            <Space>
-              <Link to="/admin/employees/new">
-                <Button type="default" icon={<UserAddOutlined />} size="large">
-                  Add Employee
-                </Button>
-              </Link>
-              <Link to="/admin/payroll">
-                <Button type="primary" icon={<DollarOutlined />} size="large">
-                  Process Payroll
-                </Button>
-              </Link>
-            </Space>
-          </Col>
-        </Row>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Admin Dashboard</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Overview of workforce and payroll</p>
+          </div>
+          <div className="flex gap-3">
+            <Link to="/admin/employees/new">
+              <Button variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Employee
+              </Button>
+            </Link>
+            <Link to="/admin/payroll">
+              <Button className="gap-2">
+                <DollarSign className="h-4 w-4" />
+                Process Payroll
+              </Button>
+            </Link>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Key Statistics Cards with CountUp */}
+      {/* KPI Summary */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8"
       >
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <motion.div variants={cardVariants}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                <Statistic
-                  title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Total Employees</span>}
-                  value={employeeStats?.total || 0}
-                  prefix={<TeamOutlined />}
-                  styles={{ value: { color: '#fff' } }}
-                  formatter={(value) => <CountUp end={value} duration={2} />}
-                />
-              </Card>
-            </motion.div>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <motion.div variants={cardVariants}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
-                <Statistic
-                  title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Active</span>}
-                  value={employeeStats?.active || 0}
-                  prefix={<CheckCircleOutlined />}
-                  styles={{ value: { color: '#fff' } }}
-                  formatter={(value) => <CountUp end={value} duration={2} />}
-                />
-              </Card>
-            </motion.div>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <motion.div variants={cardVariants}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
-                <Statistic
-                  title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Pending Payrolls</span>}
-                  value={payrollStats?.pending || 0}
-                  prefix={<ClockCircleOutlined />}
-                  styles={{ value: { color: '#fff' } }}
-                  formatter={(value) => <CountUp end={value} duration={2} />}
-                />
-              </Card>
-            </motion.div>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <motion.div variants={cardVariants}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
-                <Statistic
-                  title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Month Payout</span>}
-                  value={payrollStats?.currentMonthNet || 0}
-                  prefix="₹"
-                  precision={0}
-                  styles={{ value: { color: '#fff', fontSize: 20 } }}
-                  formatter={(value) => <CountUp end={value} duration={2.5} separator="," />}
-                />
-              </Card>
-            </motion.div>
-          </Col>
-        </Row>
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Employees</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    <CountUp end={employeeStats?.total || 0} duration={2} />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <Users className="h-6 w-6 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active Employees</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    <CountUp end={employeeStats?.active || 0} duration={2} />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <UserCheck className="h-6 w-6 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Pending Payrolls</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    <CountUp end={payrollStats?.pending || 0} duration={2} />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={cardVariants}>
+          <Card className="border">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Current Month Net</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    ₹<CountUp end={payrollStats?.currentMonthNet || 0} duration={2.5} separator="," />
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <DollarSign className="h-6 w-6 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
 
-      {/* Charts Section */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} lg={16}>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <Card
-              title={
-                <Space>
-                  <RiseOutlined style={{ color: '#1890ff' }} />
-                  <span>Monthly Payroll Trend</span>
-                </Space>
-              }
-              loading={loading}
-            >
-              <Column
-                data={monthlyTrendData}
-                xField="month"
-                yField="amount"
-                label={{
-                  position: 'top',
-                  style: {
-                    fill: '#000000',
-                    opacity: 0.6,
-                  },
-                }}
-                meta={{
-                  amount: {
-                    alias: 'Net Payout',
-                    formatter: (val) => `₹${val?.toLocaleString()}`,
-                  },
-                }}
-                columnStyle={{
-                  radius: [8, 8, 0, 0],
-                }}
-                color="#1890ff"
-                height={300}
-              />
-            </Card>
-          </motion.div>
-        </Col>
-        <Col xs={24} lg={8}>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-          >
-            <Card
-              title={
-                <Space>
-                  <TeamOutlined style={{ color: '#52c41a' }} />
-                  <span>Department Distribution</span>
-                </Space>
-              }
-              loading={loading}
-            >
-              <Pie
-                data={departmentData}
-                angleField="value"
-                colorField="type"
-                radius={0.8}
-                innerRadius={0.6}
-                legend={{
-                  position: 'bottom',
-                }}
-                interactions={[{ type: 'element-selected' }, { type: 'element-active' }]}
-                height={300}
-              />
-            </Card>
-          </motion.div>
-        </Col>
-      </Row>
+      {/* Main Content - Charts */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
+        {/* Monthly Payroll Trend */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="lg:col-span-2"
+        >
+          <Card className="border">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Monthly Payroll Trend</CardTitle>
+              <CardDescription>Net payout over the last 6 months</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyPayrollData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                    axisLine={{ stroke: "#e2e8f0" }}
+                  />
+                  <YAxis
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                    axisLine={{ stroke: "#e2e8f0" }}
+                    tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                  />
+                  <Tooltip
+                    formatter={(value) => `₹${value.toLocaleString()}`}
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "6px",
+                    }}
+                  />
+                  <Bar dataKey="amount" fill="#64748b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-      {/* Status Overview & Recent Activities */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            <Card title="Payroll Status Overview">
-              <Row gutter={16}>
-                <Col span={6}>
-                  <Card size="small" style={{ background: '#fff7e6', border: '1px solid #ffd591', textAlign: 'center' }}>
-                    <Statistic
-                      title="Pending"
-                      value={payrollStats?.pending || 0}
-                      styles={{ value: { color: '#faad14', fontSize: 24 } }}
-                      formatter={(value) => <CountUp end={value} duration={2} />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" style={{ background: '#e6f7ff', border: '1px solid #91d5ff', textAlign: 'center' }}>
-                    <Statistic
-                      title="Approved"
-                      value={payrollStats?.approved || 0}
-                      styles={{ value: { color: '#1890ff', fontSize: 24 } }}
-                      formatter={(value) => <CountUp end={value} duration={2} />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" style={{ background: '#f6ffed', border: '1px solid #b7eb8f', textAlign: 'center' }}>
-                    <Statistic
-                      title="Paid"
-                      value={payrollStats?.paid || 0}
-                      styles={{ value: { color: '#52c41a', fontSize: 24 } }}
-                      formatter={(value) => <CountUp end={value} duration={2} />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" style={{ background: '#fff1f0', border: '1px solid #ffccc7', textAlign: 'center' }}>
-                    <Statistic
-                      title="Failed"
-                      value={payrollStats?.failed || 0}
-                      styles={{ value: { color: '#ff4d4f', fontSize: 24 } }}
-                      formatter={(value) => <CountUp end={value} duration={2} />}
-                    />
-                  </Card>
-                </Col>
-              </Row>
-              <Divider />
-              <Row gutter={16} style={{ marginTop: 16 }}>
-                <Col span={12}>
-                  <Text type="secondary">Gross Payout</Text>
-                  <div style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff', marginTop: 4 }}>
-                    ₹<CountUp end={payrollStats?.currentMonthGross || 0} duration={2.5} separator="," />
-                  </div>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">Total Deductions</Text>
-                  <div style={{ fontSize: 20, fontWeight: 'bold', color: '#ff4d4f', marginTop: 4 }}>
-                    ₹<CountUp end={payrollStats?.currentMonthDeductions || 0} duration={2.5} separator="," />
-                  </div>
-                </Col>
-              </Row>
-            </Card>
-          </motion.div>
-        </Col>
-        <Col xs={24} lg={12}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-          >
-            <Card
-              title="Recent Activities"
-              extra={<Link to="/admin/employees">View All</Link>}
-            >
-              <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-                {recentActivities.map((activity) => (
-                  <motion.div
-                    key={activity.id}
-                    whileHover={{ scale: 1.02, x: 4 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
+        {/* Department Distribution */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <Card className="border">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Department Distribution</CardTitle>
+              <CardDescription>Employee count by department</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPie>
+                  <Pie
+                    data={departmentData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
                   >
-                    <Card size="small" style={{ background: '#fafafa' }}>
-                      <Space>
-                        {activity.type === 'success' ? (
-                          <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 18 }} />
-                        ) : (
-                          <FileTextOutlined style={{ color: '#1890ff', fontSize: 18 }} />
-                        )}
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{activity.action}</div>
-                          <Text type="secondary" style={{ fontSize: 12 }}>{activity.time}</Text>
-                        </div>
-                      </Space>
-                    </Card>
-                  </motion.div>
-                ))}
-              </Space>
-            </Card>
-          </motion.div>
-        </Col>
-      </Row>
+                    {departmentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
+                  />
+                </RechartsPie>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
 
-      {/* Quick Actions */}
+      {/* Payroll Status Overview */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7, duration: 0.5 }}
-        style={{ marginTop: 24 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="mb-8"
       >
-        <Card title="Quick Actions">
-          <Row gutter={16}>
-            <Col xs={24} sm={12} md={6}>
-              <Link to="/admin/employees/new">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Card size="small" hoverable style={{ textAlign: 'center', padding: '20px 0' }}>
-                    <UserAddOutlined style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} />
-                    <div>Add Employee</div>
-                  </Card>
-                </motion.div>
-              </Link>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Link to="/admin/payroll">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Card size="small" hoverable style={{ textAlign: 'center', padding: '20px 0' }}>
-                    <DollarOutlined style={{ fontSize: 32, color: '#52c41a', marginBottom: 8 }} />
-                    <div>Process Payroll</div>
-                  </Card>
-                </motion.div>
-              </Link>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Link to="/admin/leaves">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Card size="small" hoverable style={{ textAlign: 'center', padding: '20px 0' }}>
-                    <ClockCircleOutlined style={{ fontSize: 32, color: '#faad14', marginBottom: 8 }} />
-                    <div>Leave Approvals</div>
-                  </Card>
-                </motion.div>
-              </Link>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Link to="/admin/reports">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Card size="small" hoverable style={{ textAlign: 'center', padding: '20px 0' }}>
-                    <FileTextOutlined style={{ fontSize: 32, color: '#722ed1', marginBottom: 8 }} />
-                    <div>View Reports</div>
-                  </Card>
-                </motion.div>
-              </Link>
-            </Col>
-          </Row>
+        <Card className="border">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Payroll Status Overview</CardTitle>
+            <CardDescription>Current month payroll processing status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                <div className="rounded-full bg-yellow-50 p-2">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">
+                    <CountUp end={payrollStats?.pending || 0} duration={2} />
+                  </p>
+                  <p className="text-sm text-muted-foreground">Pending</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                <div className="rounded-full bg-blue-50 p-2">
+                  <UserCheck className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">
+                    <CountUp end={payrollStats?.approved || 0} duration={2} />
+                  </p>
+                  <p className="text-sm text-muted-foreground">Approved</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                <div className="rounded-full bg-green-50 p-2">
+                  <UserCheck className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">
+                    <CountUp end={payrollStats?.paid || 0} duration={2} />
+                  </p>
+                  <p className="text-sm text-muted-foreground">Paid</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                <div className="rounded-full bg-red-50 p-2">
+                  <Clock className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">
+                    <CountUp end={payrollStats?.failed || 0} duration={2} />
+                  </p>
+                  <p className="text-sm text-muted-foreground">Failed</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </motion.div>
+
+      {/* Bottom Section */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Recent Activities */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="lg:col-span-2"
+        >
+          <Card className="border">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Recent Activities</CardTitle>
+              <CardDescription>Latest system activities and updates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                  >
+                    <p className="text-sm text-foreground">{activity.action}</p>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">{activity.time}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+        >
+          <Card className="border">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+              <CardDescription>Common administrative tasks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <Link to="/admin/employees/new">
+                  <Button variant="outline" className="h-auto flex-col gap-2 py-4 w-full">
+                    <Plus className="h-5 w-5" />
+                    <span className="text-xs">Add Employee</span>
+                  </Button>
+                </Link>
+                <Link to="/admin/payroll">
+                  <Button variant="outline" className="h-auto flex-col gap-2 py-4 w-full">
+                    <DollarSign className="h-5 w-5" />
+                    <span className="text-xs">Process Payroll</span>
+                  </Button>
+                </Link>
+                <Link to="/admin/leaves">
+                  <Button variant="outline" className="h-auto flex-col gap-2 py-4 w-full">
+                    <Clock className="h-5 w-5" />
+                    <span className="text-xs">Leave Approvals</span>
+                  </Button>
+                </Link>
+                <Link to="/admin/reports">
+                  <Button variant="outline" className="h-auto flex-col gap-2 py-4 w-full">
+                    <TrendingUp className="h-5 w-5" />
+                    <span className="text-xs">Reports</span>
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </PageContainer>
   );
 };

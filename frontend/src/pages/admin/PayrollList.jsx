@@ -1,46 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-    Card,
-    Table,
-    Button,
-    Modal,
-    DatePicker,
-    Typography,
-    Row,
-    Col,
-    Tag,
-    Space,
-    Statistic,
-    message
-} from 'antd';
-import {
-    PlusOutlined,
-    CalendarOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    DollarOutlined,
-    TeamOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar, Plus, Users, Clock, CheckCircle2, DollarSign, ArrowRight, TrendingUp, X } from "lucide-react";
+import { Link, useNavigate } from 'react-router-dom';
 import PageContainer from '@/components/layout/PageContainer';
-import { usePayroll } from '@/hooks/usePayroll';
-import { useProcessPayroll } from '@/hooks/useProcessPayroll';
-import { getMonthlyPayrollSummary } from '@/api/payrollApi';
-import { formatCurrency } from '@/utils/formatters';
-
-const { Title, Text } = Typography;
+import { getMonthlyPayrollSummary, processMonthlyPayroll } from '@/api/payrollApi';
+import { formatCurrency, formatDate } from '@/utils/formatters';
+import { message } from 'antd';
 
 const PayrollList = () => {
-    const [filters] = useState({});
-    const [summaries, setSummaries] = useState([]);
-    const [showProcessModal, setShowProcessModal] = useState(false);
-    const [selectedMonth, setSelectedMonth] = useState(dayjs());
-    const [loadingSummaries, setLoadingSummaries] = useState(true);
-
     const navigate = useNavigate();
-    const { payrolls, loading, refetch } = usePayroll(filters);
-    const { process, loading: processing } = useProcessPayroll();
+    const [summaries, setSummaries] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showProcessModal, setShowProcessModal] = useState(false);
+    const [processing, setProcessing] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState('');
 
     useEffect(() => {
         fetchSummaries();
@@ -48,253 +22,291 @@ const PayrollList = () => {
 
     const fetchSummaries = async () => {
         try {
-            setLoadingSummaries(true);
-            const res = await getMonthlyPayrollSummary();
-            setSummaries(res.data.data);
+            setLoading(true);
+            const response = await getMonthlyPayrollSummary();
+            setSummaries(response.data.data || []);
         } catch (error) {
-            console.error('Failed to fetch summaries:', error);
             message.error('Failed to load payroll summaries');
         } finally {
-            setLoadingSummaries(false);
-        }
-    };
-
-    const columns = [
-        {
-            title: 'Month',
-            dataIndex: 'month',
-            key: 'month',
-            width: 150,
-            render: (month) => (
-                <Space>
-                    <CalendarOutlined style={{ color: '#1890ff' }} />
-                    <Text strong>{dayjs(month).format('MMMM YYYY')}</Text>
-                </Space>
-            ),
-            sorter: (a, b) => dayjs(a.month).unix() - dayjs(b.month).unix(),
-        },
-        {
-            title: 'Total Employees',
-            dataIndex: 'totalEmployees',
-            key: 'totalEmployees',
-            width: 150,
-            align: 'center',
-            render: (count) => (
-                <Tag icon={<TeamOutlined />} color="blue">
-                    {count} Employees
-                </Tag>
-            ),
-        },
-        {
-            title: 'Status Breakdown',
-            key: 'status',
-            width: 300,
-            render: (_, record) => (
-                <Space size="small">
-                    <Tag color="orange" icon={<ClockCircleOutlined />}>
-                        Pending: {record.pending}
-                    </Tag>
-                    <Tag color="blue">Approved: {record.approved}</Tag>
-                    <Tag color="success" icon={<CheckCircleOutlined />}>
-                        Paid: {record.paid}
-                    </Tag>
-                </Space>
-            ),
-        },
-        {
-            title: 'Last Updated',
-            dataIndex: 'updatedAt',
-            key: 'updatedAt',
-            width: 180,
-            render: (date) => dayjs(date).format('DD MMM YYYY, HH:mm'),
-            sorter: (a, b) => dayjs(a.updatedAt).unix() - dayjs(b.updatedAt).unix(),
-        },
-        {
-            title: 'Actions',
-            key: 'actions',
-            width: 120,
-            fixed: 'right',
-            render: (_, record) => (
-                <Button
-                    type="primary"
-                    size="small"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/payroll/${record.month}`);
-                    }}
-                >
-                    View Details
-                </Button>
-            ),
-        },
-    ];
-
-    const handleProcess = async () => {
-        const monthStr = selectedMonth.format('YYYY-MM');
-        const [year, monthNum] = monthStr.split('-');
-
-        try {
-            await process({
-                month: parseInt(monthNum, 10),
-                year: parseInt(year, 10),
-            });
-            message.success(`Payroll for ${selectedMonth.format('MMMM YYYY')} processed successfully!`);
-            setShowProcessModal(false);
-            await fetchSummaries();
-            refetch();
-        } catch (error) {
-            message.error(error.response?.data?.message || 'Failed to process payroll');
+            setLoading(false);
         }
     };
 
     // Calculate totals
-    const totals = summaries.reduce(
-        (acc, curr) => ({
-            totalEmployees: acc.totalEmployees + (curr.totalEmployees || 0),
-            pending: acc.pending + (curr.pending || 0),
-            paid: acc.paid + (curr.paid || 0),
-        }),
-        { totalEmployees: 0, pending: 0, paid: 0 }
-    );
+    const totals = {
+        totalCycles: summaries?.length || 0,
+        pendingApprovals: summaries?.reduce((sum, item) => sum + (item.pending || 0), 0) || 0,
+        completedPayments: summaries?.reduce((sum, item) => sum + (item.paid || 0), 0) || 0,
+        totalAmount: summaries?.reduce((sum, item) => sum + (item.totalNet || item.totalAmount || 0), 0) || 0,
+    };
+
+    const handleProcessPayroll = async () => {
+        if (!selectedMonth) {
+            message.error('Please select a month');
+            return;
+        }
+
+        try {
+            setProcessing(true);
+            await processMonthlyPayroll({ month: selectedMonth });
+            message.success('Payroll processing started successfully');
+            setShowProcessModal(false);
+            setSelectedMonth('');
+            fetchSummaries();
+            // Navigate to the newly processed payroll
+            navigate(`/admin/payroll/${selectedMonth}`);
+        } catch (error) {
+            message.error(error.response?.data?.message || 'Failed to process payroll');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // Generate month options (current month + next 2 months)
+    const getMonthOptions = () => {
+        const options = [];
+        const now = new Date();
+        for (let i = 0; i < 3; i++) {
+            const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+            const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const label = date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+            options.push({ value, label });
+        }
+        return options;
+    };
 
     return (
         <PageContainer>
-            <div style={{ marginBottom: 24 }}>
-                <Row justify="space-between" align="middle">
-                    <Col>
-                        <Title level={2} style={{ margin: 0 }}>
-                            Payroll Management
-                        </Title>
-                        <Text type="secondary">Manage monthly payroll cycles and employee payments</Text>
-                    </Col>
-                    <Col>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="large"
-                            onClick={() => setShowProcessModal(true)}
-                        >
-                            Process New Payroll
-                        </Button>
-                    </Col>
-                </Row>
+            {/* Header */}
+            <div className="border-b bg-card mb-8" style={{ margin: '-24px -24px 32px -24px', padding: '40px 32px' }}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Payroll Management</h1>
+                        <p className="mt-2 text-sm text-muted-foreground">Manage monthly payroll cycles and employee payments</p>
+                    </div>
+                    <Button size="lg" className="gap-2" onClick={() => setShowProcessModal(true)}>
+                        <Plus className="h-4 w-4" />
+                        Process New Payroll
+                    </Button>
+                </div>
             </div>
 
             {/* Summary Cards */}
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={8}>
-                    <Card bordered={false} style={{ background: '#f0f5ff' }}>
-                        <Statistic
-                            title="Total Payroll Cycles"
-                            value={summaries.length}
-                            prefix={<CalendarOutlined />}
-                            valueStyle={{ color: '#1890ff' }}
-                        />
-                    </Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                    <Card bordered={false} style={{ background: '#fff7e6' }}>
-                        <Statistic
-                            title="Pending Approvals"
-                            value={totals.pending}
-                            prefix={<ClockCircleOutlined />}
-                            valueStyle={{ color: '#fa8c16' }}
-                        />
-                    </Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                    <Card bordered={false} style={{ background: '#f6ffed' }}>
-                        <Statistic
-                            title="Completed Payments"
-                            value={totals.paid}
-                            prefix={<CheckCircleOutlined />}
-                            valueStyle={{ color: '#52c41a' }}
-                        />
-                    </Card>
-                </Col>
-            </Row>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                <Card className="border">
+                    <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Total Payroll Cycles</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">{totals.totalCycles}</p>
+                                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                    <TrendingUp className="h-3 w-3" />
+                                    Last 6 months
+                                </p>
+                            </div>
+                            <div className="rounded-lg bg-blue-50 p-3">
+                                <Calendar className="h-6 w-6 text-blue-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-            {/* Payroll Table */}
-            <Card>
-                <Table
-                    columns={columns}
-                    dataSource={summaries}
-                    rowKey="month"
-                    loading={loadingSummaries}
-                    pagination={{
-                        pageSize: 12,
-                        showSizeChanger: true,
-                        showTotal: (total) => `Total ${total} payroll cycles`,
-                    }}
-                    onRow={(record) => ({
-                        style: { cursor: 'pointer' },
-                        onClick: () => navigate(`/admin/payroll/${record.month}`),
-                    })}
-                    locale={{
-                        emptyText: (
-                            <div style={{ padding: '60px 0', textAlign: 'center' }}>
-                                <DollarOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-                                <div>
-                                    <Text type="secondary" style={{ fontSize: 16 }}>No payroll records yet</Text>
-                                </div>
-                                <div style={{ marginTop: 16 }}>
-                                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowProcessModal(true)}>
-                                        Process First Payroll
+                <Card className="border">
+                    <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">{totals.pendingApprovals}</p>
+                                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    Awaiting review
+                                </p>
+                            </div>
+                            <div className="rounded-lg bg-yellow-50 p-3">
+                                <Clock className="h-6 w-6 text-yellow-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border">
+                    <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Completed Payments</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">{totals.completedPayments}</p>
+                                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Successfully paid
+                                </p>
+                            </div>
+                            <div className="rounded-lg bg-green-50 p-3">
+                                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border">
+                    <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Total Disbursed</p>
+                                <p className="mt-2 text-3xl font-semibold text-foreground">
+                                    {formatCurrency(totals.totalAmount).replace('.00', '')}
+                                </p>
+                                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                    <DollarSign className="h-3 w-3" />
+                                    All time total
+                                </p>
+                            </div>
+                            <div className="rounded-lg bg-muted p-3">
+                                <DollarSign className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Payroll Cycles */}
+            <Card className="border">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold">Payroll Cycles</CardTitle>
+                    <CardDescription>View and manage all payroll processing cycles</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-3">
+                        {summaries?.map((payroll) => (
+                            <Link key={payroll._id} to={`/admin/payroll/${payroll._id}`}>
+                                <div className="group flex cursor-pointer items-center justify-between rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:bg-accent/50">
+                                    <div className="flex flex-1 items-center gap-6">
+                                        {/* Month Info */}
+                                        <div className="flex min-w-[140px] items-center gap-3">
+                                            <div className="rounded-lg bg-muted p-2.5">
+                                                <Calendar className="h-5 w-5 text-muted-foreground" />
+                                            </div>
+                                            <div>
+                                                <div>
+                                                    <p className="font-semibold text-foreground">{formatDate(payroll.month, 'MMMM YYYY')}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Updated {formatDate(payroll.updatedAt, 'MMM DD, YYYY')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Employee Count */}
+                                        <div className="hidden min-w-[140px] md:block">
+                                            <div className="flex items-center gap-2">
+                                                <Users className="h-4 w-4 text-muted-foreground" />
+                                                <span className="text-sm font-medium text-foreground">{payroll.totalEmployees}</span>
+                                                <span className="text-xs text-muted-foreground">Employees</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Status Badges */}
+                                        <div className="hidden flex-1 items-center gap-2 lg:flex">
+                                            {payroll.pending > 0 && (
+                                                <div className="inline-flex items-center rounded-md border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-xs font-semibold text-yellow-700">
+                                                    <Clock className="mr-1 h-3 w-3" />
+                                                    {payroll.pending} Pending
+                                                </div>
+                                            )}
+                                            {payroll.approved > 0 && (
+                                                <div className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                                                    {payroll.approved} Approved
+                                                </div>
+                                            )}
+                                            {payroll.paid > 0 && (
+                                                <div className="inline-flex items-center rounded-md border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                                    {payroll.paid} Paid
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Amount */}
+                                        <div className="hidden min-w-[120px] text-right xl:block">
+                                            <p className="text-sm font-semibold text-foreground">{formatCurrency(payroll.totalNet || payroll.totalAmount || 0)}</p>
+                                            <p className="text-xs text-muted-foreground">Total payout</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Button */}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-4 gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
+                                    >
+                                        View Details
+                                        <ArrowRight className="h-4 w-4" />
                                     </Button>
                                 </div>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* Empty State */}
+                    {summaries?.length === 0 && !loading && (
+                        <div className="flex flex-col items-center justify-center py-16">
+                            <div className="rounded-full bg-muted p-6">
+                                <Calendar className="h-12 w-12 text-muted-foreground" />
                             </div>
-                        ),
-                    }}
-                />
+                            <h3 className="mt-4 text-lg font-semibold text-foreground">No payroll records yet</h3>
+                            <p className="mt-2 text-sm text-muted-foreground">Get started by processing your first payroll</p>
+                            <Button className="mt-6 gap-2" onClick={() => setShowProcessModal(true)}>
+                                <Plus className="h-4 w-4" />
+                                Process First Payroll
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
             </Card>
 
             {/* Process Payroll Modal */}
-            <Modal
-                title={
-                    <Space>
-                        <CalendarOutlined style={{ color: '#1890ff' }} />
-                        <span>Process New Payroll</span>
-                    </Space>
-                }
-                open={showProcessModal}
-                onCancel={() => setShowProcessModal(false)}
-                onOk={handleProcess}
-                confirmLoading={processing}
-                okText={processing ? 'Processing...' : 'Process Payroll'}
-                width={500}
-            >
-                <div style={{ padding: '20px 0' }}>
-                    <div style={{ marginBottom: 16 }}>
-                        <Text strong>Select Month</Text>
-                        <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-                            Choose the month for which you want to process payroll
-                        </Text>
-                    </div>
-
-                    <DatePicker
-                        picker="month"
-                        value={selectedMonth}
-                        onChange={(date) => setSelectedMonth(date)}
-                        format="MMMM YYYY"
-                        size="large"
-                        style={{ width: '100%' }}
-                        disabledDate={(current) => current && current > dayjs().endOf('month')}
-                    />
-
-                    <Card
-                        size="small"
-                        style={{ marginTop: 16, background: '#e6f7ff', border: '1px solid #91d5ff' }}
-                    >
-                        <Text type="secondary" style={{ fontSize: 13 }}>
-                            This will fetch all <Text strong>active employees</Text> and create payroll records for{' '}
-                            <Text strong style={{ color: '#1890ff' }}>
-                                {selectedMonth.format('MMMM YYYY')}
-                            </Text>
-                            . Salary will be calculated based on their current salary structure.
-                        </Text>
+            {showProcessModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowProcessModal(false)}>
+                    <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                        <CardHeader className="border-b">
+                            <div className="flex items-center justify-between">
+                                <CardTitle>Process New Payroll</CardTitle>
+                                <Button variant="ghost" size="icon" onClick={() => setShowProcessModal(false)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <CardDescription>Select a month to process payroll for all active employees</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-6">
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Select Month</label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-md"
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                >
+                                    <option value="">Choose a month...</option>
+                                    {getMonthOptions().map(option => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2 justify-end pt-4">
+                                <Button variant="outline" onClick={() => setShowProcessModal(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleProcessPayroll}
+                                    disabled={!selectedMonth || processing}
+                                >
+                                    {processing ? 'Processing...' : 'Process Payroll'}
+                                </Button>
+                            </div>
+                        </CardContent>
                     </Card>
                 </div>
-            </Modal>
+            )}
         </PageContainer>
     );
 };

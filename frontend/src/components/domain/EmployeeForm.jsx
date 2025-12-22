@@ -12,7 +12,6 @@ import {
     Row,
     Col,
     Steps,
-    Button,
     Divider,
     Statistic,
     Space,
@@ -24,10 +23,9 @@ import {
     BankOutlined,
     DollarOutlined,
     SafetyOutlined,
-    ArrowLeftOutlined,
-    ArrowRightOutlined,
-    SaveOutlined
 } from '@ant-design/icons';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import dayjs from 'dayjs';
 import { DEPARTMENTS } from '@/utils/constants';
 import { formatCurrency } from '@/utils/formatters';
@@ -136,18 +134,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
 
     useEffect(() => {
         if (defaultValues) {
-            const formatted = {
-                ...defaultValues,
-                personalInfo: {
-                    ...defaultValues.personalInfo,
-                    dateOfBirth: defaultValues.personalInfo?.dateOfBirth ? dayjs(defaultValues.personalInfo.dateOfBirth) : null,
-                },
-                employment: {
-                    ...defaultValues.employment,
-                    dateOfJoining: defaultValues.employment?.dateOfJoining ? dayjs(defaultValues.employment.dateOfJoining) : null,
-                },
-            };
-            reset(formatted);
+            reset(defaultValues);
         }
     }, [defaultValues, reset]);
 
@@ -227,7 +214,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
             <form onSubmit={handleSubmit(handleFormSubmit)}>
                 {/* Step 0: Personal Information */}
                 {currentStep === 0 && (
-                    <Card title={<><UserOutlined /> Personal Information</>} bordered={false}>
+                    <Card title={<><UserOutlined /> Personal Information</>}>
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12}>
                                 <Controller
@@ -384,7 +371,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
 
                 {/* Step 1: Employment Details */}
                 {currentStep === 1 && (
-                    <Card title={<><SafetyOutlined /> Employment Details</>} bordered={false}>
+                    <Card title={<><BankOutlined /> Employment Information</>}>
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12}>
                                 <Controller
@@ -464,7 +451,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
 
                 {/* Step 2: Bank Details */}
                 {currentStep === 2 && (
-                    <Card title={<><BankOutlined /> Bank Details</>} bordered={false}>
+                    <Card title={<><DollarOutlined /> Bank Details</>}>
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12}>
                                 <Controller
@@ -553,7 +540,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                 {/* Step 3: Salary Structure */}
                 {currentStep === 3 && (
                     <>
-                        <Card title={<><DollarOutlined /> Salary Structure</>} bordered={false}>
+                        <Card title={<><SafetyOutlined /> Salary Structure</>}>
                             <Row gutter={[16, 16]}>
                                 <Col xs={24}>
                                     <Title level={5}>Earnings</Title>
@@ -708,7 +695,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                         </Card>
 
                         {/* Portal Access */}
-                        <Card title="Portal Access" style={{ marginTop: 16 }} bordered={false}>
+                        <Card title="Summary" style={{ marginTop: 16 }}>
                             <Row gutter={16}>
                                 <Col xs={24} sm={12}>
                                     {!isEdit ? (
@@ -751,11 +738,12 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                 )}
 
                 {/* Navigation Buttons */}
-                <Card style={{ marginTop: 24 }} bordered={false}>
+                <Card style={{ marginTop: 24 }}>
                     <Row justify="space-between">
                         <Col>
                             {currentStep > 0 && (
-                                <Button size="large" icon={<ArrowLeftOutlined />} onClick={handlePrevious}>
+                                <Button size="lg" variant="outline" onClick={handlePrevious}>
+                                    <ChevronLeft className="h-4 w-4 mr-2" />
                                     Previous
                                 </Button>
                             )}
@@ -763,11 +751,13 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                         <Col>
                             <Space>
                                 {currentStep < steps.length - 1 ? (
-                                    <Button type="primary" size="large" icon={<ArrowRightOutlined />} onClick={handleNext} iconPosition="end">
+                                    <Button size="lg" onClick={handleNext}>
                                         Next Step
+                                        <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 ) : (
-                                    <Button type="primary" size="large" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
+                                    <Button size="lg" type="submit" disabled={loading}>
+                                        <Save className="h-4 w-4 mr-2" />
                                         {loading ? 'Saving...' : (isEdit ? 'Update Employee' : 'Create Employee')}
                                     </Button>
                                 )}

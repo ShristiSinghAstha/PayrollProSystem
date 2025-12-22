@@ -1,6 +1,6 @@
 import { formatCurrency } from '@/utils/formatters';
 
-const SalaryBreakdown = ({ earnings = {}, deductions = {}, netSalary }) => {
+const SalaryBreakdown = ({ earnings = {}, deductions = {}, adjustments = [], netSalary }) => {
     const breakdownRows = [
         { label: 'Basic', value: earnings.basic },
         { label: 'HRA', value: earnings.hra },
@@ -42,8 +42,8 @@ const SalaryBreakdown = ({ earnings = {}, deductions = {}, netSalary }) => {
                                     {adj.type}: {adj.description}
                                 </span>
                                 <span className={`font-medium ${['Bonus', 'Allowance', 'Reimbursement'].includes(adj.type)
-                                        ? 'text-green-700'
-                                        : 'text-red-700'
+                                    ? 'text-green-700'
+                                    : 'text-red-700'
                                     }`}>
                                     {['Bonus', 'Allowance', 'Reimbursement'].includes(adj.type) ? '+' : '-'}
                                     {formatCurrency(adj.amount)}

@@ -6,6 +6,7 @@ import ProtectedRoute from './ProtectedRoute';
 import Login from '@/pages/Login';
 import AdminDashboard from '@/pages/admin/Dashboard';
 import EmployeeList from '@/pages/admin/EmployeeList';
+import EmployeeDetail from '@/pages/admin/EmployeeDetail';
 import EmployeeForm from '@/pages/admin/EmployeeForm';
 import PayrollList from '@/pages/admin/PayrollList';
 import PayrollDetail from '@/pages/admin/PayrollDetail';
@@ -54,7 +55,8 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="employees" element={<EmployeeList />} />
         <Route path="employees/new" element={<EmployeeForm />} />
-        <Route path="employees/:id" element={<EmployeeForm />} />
+        <Route path="employees/:id/view" element={<EmployeeDetail />} />
+        <Route path="employees/:id/edit" element={<EmployeeForm />} />
         <Route path="payroll" element={<PayrollList />} />
         <Route path="payroll/:month" element={<PayrollDetail />} />
         <Route path="reports" element={<Reports />} />
