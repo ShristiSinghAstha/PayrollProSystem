@@ -85,9 +85,12 @@ const employeeSchema = new mongoose.Schema({
       required: [true, 'Date of joining is required'],
       validate: {
         validator: function (value) {
-          return value <= new Date();
+          const today = new Date();
+          const thirtyDaysFromNow = new Date();
+          thirtyDaysFromNow.setDate(today.getDate() + 30);
+          return value <= thirtyDaysFromNow;
         },
-        message: 'Date of joining cannot be in the future'
+        message: 'Date of joining cannot be more than 30 days in the future'
       }
     },
     status: {

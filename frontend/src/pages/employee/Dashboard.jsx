@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import CountUp from 'react-countup';
 import PageContainer from '@/components/layout/PageContainer';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -31,6 +32,7 @@ const cardVariants = {
 
 const EmployeeDashboard = () => {
   const { data, loading } = useEmployeeDashboard();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const quickActions = [
@@ -51,7 +53,7 @@ const EmployeeDashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              Welcome back, {data?.employee?.personalInfo?.firstName}!
+              Welcome back, {user?.personalInfo?.firstName || 'Employee'}!
             </h1>
             <p className="mt-2 text-muted-foreground">
               {dayjs().format('dddd, MMMM D, YYYY')}
@@ -204,8 +206,8 @@ const EmployeeDashboard = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Status:</span>
                       <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${data.currentPayroll.status === 'Paid'
-                          ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-blue-50 text-blue-700 border-blue-200'
                         }`}>
                         {data.currentPayroll.status}
                       </span>
