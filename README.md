@@ -1,50 +1,147 @@
-🧾 PayrollProSystem
-Software Platform for Managing Payment Transactions of Employees
+# PayrollPro System
 
+> **Academic Project**: Software Platform for Managing Employee Payment Transactions
 
+## 📋 Overview
 
-📌 About the Project
+PayrollPro is a full-stack web application designed to automate and streamline payroll management processes in organizational settings. The system addresses the challenges of manual salary computation, leave tracking, and employee data management through a comprehensive digital solution built using the MERN stack.
 
-PayrollProSystem is a software platform designed to streamline employee payment processing in organizations.
-It aims to simplify payroll operations, manage employee records, automate salary calculations, provide admin control, and offer an interactive self-service portal for employees.
+This academic project demonstrates the implementation of enterprise-level features including automated payroll processing, role-based access control, real-time notifications, and dual-portal architecture for administrators and employees.
 
+## 🎯 Key Features
 
+- **Employee Management** - Complete CRUD operations with auto-generated employee IDs and bulk import/export capabilities
+- **Payroll Processing** - Automated monthly salary calculations with support for earnings, deductions, and adjustments
+- **Leave Management** - Multi-type leave system (Casual, Sick, Earned, LOP) with approval workflows
+- **Authentication & Authorization** - JWT-based secure login with role-based access control
+- **Real-time Notifications** - Socket.io integration for instant updates on payroll and leave actions
+- **Document Generation** - PDF payslip creation with cloud storage and email delivery
+- **Audit Trail** - Comprehensive logging of all system operations for compliance and transparency
+- **Analytics Dashboard** - Visual insights with charts for payroll trends and employee statistics
 
-🎯 Key Features
+## 🏗️ Technology Stack
 
-Secure employee data management
+### Backend
+- **Runtime**: Node.js with Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT, bcrypt.js
+- **Real-time**: Socket.io
+- **File Processing**: Multer, PDFKit, Cloudinary
+- **Email**: Nodemailer
 
-Automated payroll computation
+### Frontend
+- **Framework**: React 19 with Vite
+- **Routing**: React Router DOM
+- **UI Library**: Ant Design, TailwindCSS
+- **State Management**: React Hooks, Context API
+- **Forms**: React Hook Form with Zod validation
+- **Charts**: Recharts, Ant Design Charts
+- **Real-time**: Socket.io Client
 
-Admin dashboard with role-based access
+## 📂 Project Structure
 
-Employee self-service portal
+```
+payroll/
+├── backend/               # Node.js/Express.js server
+│   ├── src/
+│   │   ├── config/       # Database and Socket.io configuration
+│   │   ├── controllers/  # Business logic (7 controllers)
+│   │   ├── models/       # MongoDB schemas (5 models)
+│   │   ├── routes/       # API endpoints (7 route files)
+│   │   ├── middlewares/  # Authentication and validation
+│   │   └── utils/        # Helper functions and services
+│   └── package.json
+│
+└── frontend/             # React application
+    ├── src/
+    │   ├── pages/        # Admin and Employee portal pages
+    │   ├── components/   # Reusable UI components
+    │   ├── contexts/     # Auth and Socket contexts
+    │   ├── hooks/        # Custom React hooks
+    │   └── api/          # API integration layer
+    └── package.json
+```
 
-Salary history and transaction reports
+## 🚀 Getting Started
 
-Modular system design for expandability
+### Prerequisites
+- Node.js (v16 or higher)
+- MongoDB Atlas account or local MongoDB instance
+- npm or yarn package manager
 
+### Installation
 
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd payroll
+   ```
 
-⚙️ Technology Stack
+2. **Backend Setup**
+   ```bash
+   cd backend
+   npm install
+   cp .env.example .env
+   # Edit .env with your MongoDB URI and configuration
+   npm run dev
+   ```
 
-Category	Technology:
+3. **Frontend Setup**
+   ```bash
+   cd frontend
+   npm install
+   cp .env.example .env
+   # Edit .env with backend API URL
+   npm run dev
+   ```
 
-Frontend:	Node.js, TailwindCSS, JavaScript
+4. **Access the Application**
+   - Frontend: `http://localhost:5173`
+   - Backend API: `http://localhost:5000`
 
-Backend:	React.js
+## 📚 Documentation
 
-Database:	MongoDB
+- [Backend Documentation](./backend/README.md) - API endpoints, database schemas, and backend architecture
+- [Analysis Report](./docs/analysis_report.md) - Comprehensive technical analysis (if available)
 
-Version Control:	Git & GitHub
+## 👥 Team Members
 
+This project was developed collaboratively as an academic assignment:
 
+| Name | Role | Contribution |
+|------|------|--------------|
+| **Shristi Singh Astha** | Authentication & Access Control | Implemented JWT authentication, password reset functionality, role-based routing, and security middleware |
+| **Sai Prashanth** | Admin Dashboard & Core Systems | Developed employee management, payroll processing, reports module, bulk operations, and audit logging |
+| **Anchal Kumari Malik** | Employee Portal | Built employee self-service interface including dashboard, payslip viewing, leave management, and profile updates |
 
+## 🔐 Security Features
 
-## 👥 Members' Contribution
+- Password encryption using bcrypt
+- JWT token-based authentication
+- Role-based access control (Admin/Employee)
+- Bank account number masking
+- Input validation and sanitization
+- Comprehensive audit trail logging
+- Secure file upload handling
 
-| S.No | Member Name              | Area of Work / Responsibility  | Contribution Details |
-|-----:|--------------------------|--------------------------------|----------------------|
-| 1    | Shristi Singh Astha      | Access Control                 | Designed and implemented user authentication and role-based access system for secure login and user management. |
-| 2    | Sai Prashanth            | Admin Dashboard                | Developed the Admin Dashboard including employee management, payroll control workflows, and administrative functionalities. |
-| 3    | Anchal Kumari Malik      | Employee Portal                | Built the employee-facing portal with salary viewing, profile updates, and other self-service features. |
+## 📊 System Capabilities
+
+- Processes payroll for unlimited employees
+- Handles multiple leave types with automatic balance tracking
+- Generates professional PDF payslips
+- Sends email notifications for important events
+- Supports bulk employee import via CSV
+- Exports data to Excel for reporting
+- Real-time updates across all connected clients
+
+## 📝 License
+
+This is an academic project developed for educational purposes.
+
+## 🙏 Acknowledgments
+
+Special thanks to our academic supervisors and mentors for their guidance throughout the development of this project.
+
+---
+
+**Project Status**: Active Development | **Academic Year**: 2024-2025

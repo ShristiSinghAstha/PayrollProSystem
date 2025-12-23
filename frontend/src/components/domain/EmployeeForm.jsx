@@ -138,19 +138,29 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
         }
     }, [defaultValues, reset]);
 
-    const watchSalary = watch('salaryStructure');
+    // Watch individual fields instead of the parent object to ensure useMemo re-runs
+    const basicSalary = watch('salaryStructure.basicSalary');
+    const hra = watch('salaryStructure.hra');
+    const da = watch('salaryStructure.da');
+    const specialAllowance = watch('salaryStructure.specialAllowance');
+    const otherAllowances = watch('salaryStructure.otherAllowances');
+    const pfPercentage = watch('salaryStructure.pfPercentage');
+    const professionalTax = watch('salaryStructure.professionalTax');
+    const esiPercentage = watch('salaryStructure.esiPercentage');
 
     const earnings = useMemo(() => {
-        const { basicSalary = 0, hra = 0, da = 0, specialAllowance = 0, otherAllowances = 0 } = watchSalary || {};
-        return Number(basicSalary) + Number(hra) + Number(da) + Number(specialAllowance) + Number(otherAllowances);
-    }, [watchSalary]);
+        const total = Number(basicSalary || 0) + Number(hra || 0) + Number(da || 0) + Number(specialAllowance || 0) + Number(otherAllowances || 0);
+        console.log('💰 Earnings:', { basicSalary, hra, da, specialAllowance, otherAllowances, total });
+        return isNaN(total) ? 0 : total;
+    }, [basicSalary, hra, da, specialAllowance, otherAllowances]);
 
     const deductions = useMemo(() => {
-        const { basicSalary = 0, pfPercentage = 0, professionalTax = 0, esiPercentage = 0 } = watchSalary || {};
-        const pf = (Number(pfPercentage) / 100) * Number(basicSalary);
-        const esi = (Number(esiPercentage) / 100) * Number(basicSalary);
-        return pf + Number(professionalTax) + esi;
-    }, [watchSalary]);
+        const pf = (Number(pfPercentage || 0) / 100) * Number(basicSalary || 0);
+        const esi = (Number(esiPercentage || 0) / 100) * Number(basicSalary || 0);
+        const total = pf + Number(professionalTax || 0) + esi;
+        console.log('📉 Deductions:', { basicSalary, pfPercentage, professionalTax, esiPercentage, pf, esi, total });
+        return isNaN(total) ? 0 : total;
+    }, [basicSalary, pfPercentage, professionalTax, esiPercentage]);
 
     const net = Math.max(earnings - deductions, 0);
 
@@ -549,12 +559,12 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.basicSalary"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>
                                                     Basic Salary <Text type="danger">*</Text>
                                                 </label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="50000" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="50000" />
                                                 {errors.salaryStructure?.basicSalary && (
                                                     <Text type="danger" style={{ fontSize: 12 }}>{errors.salaryStructure.basicSalary.message}</Text>
                                                 )}
@@ -566,10 +576,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.hra"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>HRA</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="15000" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="15000" />
                                             </div>
                                         )}
                                     />
@@ -578,10 +588,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.da"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>DA (Dearness Allowance)</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="5000" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="5000" />
                                             </div>
                                         )}
                                     />
@@ -590,10 +600,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.specialAllowance"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>Special Allowance</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="10000" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="10000" />
                                             </div>
                                         )}
                                     />
@@ -602,10 +612,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.otherAllowances"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>Other Allowances</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="0" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="0" />
                                             </div>
                                         )}
                                     />
@@ -619,10 +629,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.pfPercentage"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>PF (%)</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} max={100} suffix="%" placeholder="12" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} max={100} suffix="%" placeholder="12" />
                                             </div>
                                         )}
                                     />
@@ -631,10 +641,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.professionalTax"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>Professional Tax</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="200" />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} prefix="₹" placeholder="200" />
                                             </div>
                                         )}
                                     />
@@ -643,10 +653,10 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                                     <Controller
                                         name="salaryStructure.esiPercentage"
                                         control={control}
-                                        render={({ field }) => (
+                                        render={({ field: { value, onChange, ...rest } }) => (
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: 8 }}>ESI (%)</label>
-                                                <InputNumber {...field} size="large" style={{ width: '100%' }} min={0} max={100} suffix="%" placeholder="0.75" step={0.01} />
+                                                <InputNumber {...rest} value={value} onChange={onChange} size="large" style={{ width: '100%' }} min={0} max={100} suffix="%" placeholder="0.75" step={0.01} />
                                             </div>
                                         )}
                                     />
@@ -655,41 +665,26 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
 
                             <Divider />
 
-                            {/* Salary Summary */}
+                            {/* Salary Summary - Clean Shadcn Style */}
                             <Row gutter={16}>
                                 <Col xs={24} sm={8}>
-                                    <Card style={{ background: '#f0f5ff', border: '1px solid #adc6ff' }}>
-                                        <Statistic
-                                            title="Gross Earnings"
-                                            value={earnings}
-                                            precision={2}
-                                            prefix="₹"
-                                            valueStyle={{ color: '#1890ff', fontSize: 24 }}
-                                        />
-                                    </Card>
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <p className="text-sm font-medium text-muted-foreground mb-2">Gross Earnings</p>
+                                        <p className="text-3xl font-bold text-foreground">₹{earnings.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    </div>
                                 </Col>
                                 <Col xs={24} sm={8}>
-                                    <Card style={{ background: '#fff1f0', border: '1px solid #ffccc7' }}>
-                                        <Statistic
-                                            title="Total Deductions"
-                                            value={deductions}
-                                            precision={2}
-                                            prefix="₹"
-                                            valueStyle={{ color: '#cf1322', fontSize: 24 }}
-                                        />
-                                    </Card>
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <p className="text-sm font-medium text-muted-foreground mb-2">Total Deductions</p>
+                                        <p className="text-3xl font-bold text-foreground">₹{deductions.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    </div>
                                 </Col>
                                 <Col xs={24} sm={8}>
-                                    <Card style={{ background: '#f6ffed', border: '1px solid #b7eb8f' }}>
-                                        <Statistic
-                                            title="Net Salary"
-                                            value={net}
-                                            precision={2}
-                                            prefix="₹"
-                                            valueStyle={{ color: '#52c41a', fontSize: 28, fontWeight: 'bold' }}
-                                        />
-                                        <Text type="secondary" style={{ fontSize: 12 }}>Per Month</Text>
-                                    </Card>
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <p className="text-sm font-medium text-muted-foreground mb-2">Net Salary</p>
+                                        <p className="text-3xl font-bold text-primary">₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Per Month</p>
+                                    </div>
                                 </Col>
                             </Row>
                         </Card>
@@ -742,7 +737,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                     <Row justify="space-between">
                         <Col>
                             {currentStep > 0 && (
-                                <Button size="lg" variant="outline" onClick={handlePrevious}>
+                                <Button type="button" size="lg" variant="outline" onClick={handlePrevious}>
                                     <ChevronLeft className="h-4 w-4 mr-2" />
                                     Previous
                                 </Button>
@@ -751,7 +746,7 @@ const EmployeeForm = ({ defaultValues = defaultFormValues, onSubmit, loading }) 
                         <Col>
                             <Space>
                                 {currentStep < steps.length - 1 ? (
-                                    <Button size="lg" onClick={handleNext}>
+                                    <Button type="button" size="lg" onClick={handleNext}>
                                         Next Step
                                         <ChevronRight className="h-4 w-4 ml-2" />
                                     </Button>

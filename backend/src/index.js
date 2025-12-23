@@ -75,13 +75,26 @@ httpServer.listen(PORT, HOST, () => {
     console.log('='.repeat(50));
 });
 
-process.on('unhandledRejection', (err) => {
-    console.error('❌ Unhandled Promise Rejection:', err);
-    process.exit(1);
+// Global error handlers - don't crash on promise rejections during processing
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Promise Rejection:', {
+        reason: reason,
+        message: reason?.message,
+        stack: reason?.stack,
+        promise: promise
+    });
+    // Don't crash - log and continue (important for bulk operations)
+    // The individual try-catch blocks will handle rollback
 });
 
 process.on('uncaughtException', (err) => {
-    console.error('❌ Uncaught Exception:', err);
+    console.error('❌ Uncaught Exception:', {
+        message: err.message,
+        stack: err.stack,
+        code: err.code
+    });
+    // For uncaught exceptions, we should exit gracefully
+    console.error('Server will shut down due to uncaught exception...');
     process.exit(1);
 });
 
