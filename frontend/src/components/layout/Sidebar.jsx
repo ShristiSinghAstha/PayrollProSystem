@@ -8,7 +8,8 @@ import {
   BarChart3,
   FileText,
   Bell,
-  User
+  User,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,7 @@ const Sidebar = () => {
     { name: 'Payroll', path: '/admin/payroll', icon: Wallet },
     { name: 'Leaves', path: '/admin/leaves', icon: Calendar },
     { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
+    { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
   const employeeLinks = [

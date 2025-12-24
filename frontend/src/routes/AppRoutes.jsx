@@ -17,6 +17,7 @@ import Reports from '@/pages/admin/Reports';
 import Profile from '@/pages/employee/Profile';
 import LeaveApprovals from '@/pages/admin/LeaveApprovals';
 import MyLeaves from '@/pages/employee/MyLeaves';
+import AdminSettings from '@/pages/admin/Settings';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 
@@ -61,6 +62,7 @@ const AppRoutes = () => {
         <Route path="payroll/:month" element={<PayrollDetail />} />
         <Route path="reports" element={<Reports />} />
         <Route path="leaves" element={<LeaveApprovals />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
 
       {/* Employee Routes */}

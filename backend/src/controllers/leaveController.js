@@ -2,6 +2,7 @@ import Leave from '../models/Leave.js';
 import Employee from '../models/Employee.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { emitToUser, emitToAdmins } from '../config/socket.js';
+import { notifyAdminsNewLeave, notifyAdminsLeaveDecision } from '../utils/notificationService.js';
 
 // Apply for leave (Employee)
 export const applyLeave = asyncHandler(async (req, res) => {
@@ -55,6 +56,15 @@ export const applyLeave = asyncHandler(async (req, res) => {
     emitToAdmins('leave:newApplication', {
         message: `New leave application from ${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
         leave
+    });
+
+    // Notify admins with visual toast
+    notifyAdminsNewLeave({
+        employeeName: `${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
+        leaveType: leave.leaveType,
+        startDate: leave.startDate.toLocaleDateString('en-IN'),
+        endDate: leave.endDate.toLocaleDateString('en-IN'),
+        totalDays: leave.totalDays
     });
 
     res.status(201).json({
@@ -172,6 +182,14 @@ export const approveLeave = asyncHandler(async (req, res) => {
         leave
     });
 
+    // Admin operational notification
+    notifyAdminsLeaveDecision({
+        status: 'Approved',
+        employeeName: `${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
+        leaveType: leave.leaveType,
+        adminName: `${req.user.personalInfo.firstName} ${req.user.personalInfo.lastName}`
+    });
+
     res.json({
         success: true,
         message: 'Leave approved successfully',
@@ -213,6 +231,14 @@ export const rejectLeave = asyncHandler(async (req, res) => {
     emitToAdmins('leave:statusUpdate', {
         message: `Leave rejected for ${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
         leave
+    });
+
+    // Admin operational notification
+    notifyAdminsLeaveDecision({
+        status: 'Rejected',
+        employeeName: `${leave.employeeId.personalInfo.firstName} ${leave.employeeId.personalInfo.lastName}`,
+        leaveType: leave.leaveType,
+        adminName: `${req.user.personalInfo.firstName} ${req.user.personalInfo.lastName}`
     });
 
     res.json({

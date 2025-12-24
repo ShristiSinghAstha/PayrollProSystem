@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, UserCheck, Clock, DollarSign, Plus, TrendingUp, PieChart } from "lucide-react";
+import { Users, UserCheck, Clock, DollarSign, Plus, TrendingUp, PieChart, Calendar } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -224,7 +224,7 @@ const AdminDashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Department Distribution */}
+        {/* Pending Approvals Overview */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -232,33 +232,75 @@ const AdminDashboard = () => {
         >
           <Card className="border">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Department Distribution</CardTitle>
-              <CardDescription>Employee count by department</CardDescription>
+              <CardTitle className="text-lg font-semibold">Pending Approvals</CardTitle>
+              <CardDescription>Items requiring your attention</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <RechartsPie>
-                  <Pie
-                    data={departmentData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {departmentData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
-                  />
-                </RechartsPie>
-              </ResponsiveContainer>
+              <div className="space-y-4">
+                {/* Payroll Approvals */}
+                <Link to="/admin/payroll" className="block group">
+                  <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-yellow-50 p-2.5">
+                        <Clock className="h-5 w-5 text-yellow-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">Payroll Approvals</p>
+                        <p className="text-xs text-muted-foreground">Pending review</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-semibold text-foreground">
+                        <CountUp end={payrollStats?.pending || 0} duration={2} />
+                      </span>
+                      <Button variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground">
+                        Review
+                      </Button>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Leave Requests */}
+                <Link to="/admin/leaves" className="block group">
+                  <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-blue-50 p-2.5">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">Leave Requests</p>
+                        <p className="text-xs text-muted-foreground">Awaiting approval</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-semibold text-foreground">
+                        <CountUp end={0} duration={2} />
+                      </span>
+                      <Button variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground">
+                        Review
+                      </Button>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Quick Stats */}
+                <div className="pt-2 border-t">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground mb-1">Active Employees</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        <CountUp end={employeeStats?.active || 0} duration={2} />
+                      </p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground mb-1">Departments</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        <CountUp end={employeeStats?.byDepartment?.length || 0} duration={2} />
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
