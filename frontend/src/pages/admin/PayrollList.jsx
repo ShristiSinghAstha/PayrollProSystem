@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus, Users, Clock, CheckCircle2, DollarSign, ArrowRight, TrendingUp, X } from "lucide-react";
+import { Calendar, Plus, Users, Clock, CheckCircle2, DollarSign, ArrowRight, TrendingUp, X, Search, Filter } from "lucide-react";
 import { Link, useNavigate } from 'react-router-dom';
 import PageContainer from '@/components/layout/PageContainer';
 import { getMonthlyPayrollSummary, processMonthlyPayroll } from '@/api/payrollApi';
@@ -15,6 +15,11 @@ const PayrollList = () => {
     const [showProcessModal, setShowProcessModal] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState('');
+
+    // Filter states
+    const [selectedYear, setSelectedYear] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchSummaries();
@@ -79,6 +84,37 @@ const PayrollList = () => {
         }
         return options;
     };
+
+    // Get unique years from summaries (with safety check)
+    const availableYears = summaries && summaries.length > 0
+        ? [...new Set(summaries.map(s => new Date(s.month).getFullYear()))].sort((a, b) => b - a)
+        : [];
+
+    // Filter summaries (with safety check)
+    const filteredSummaries = (summaries || []).filter(payroll => {
+        const payrollDate = new Date(payroll.month);
+        const payrollYear = payrollDate.getFullYear();
+        const monthName = payrollDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+        // Year filter
+        if (selectedYear !== 'all' && payrollYear !== parseInt(selectedYear)) {
+            return false;
+        }
+
+        // Status filter
+        if (selectedStatus !== 'all') {
+            if (selectedStatus === 'pending' && payroll.pending === 0) return false;
+            if (selectedStatus === 'approved' && payroll.approved === 0) return false;
+            if (selectedStatus === 'paid' && payroll.paid === 0) return false;
+        }
+
+        // Search filter
+        if (searchTerm && !monthName.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+        }
+
+        return true;
+    });
 
     return (
         <PageContainer>
@@ -173,6 +209,78 @@ const PayrollList = () => {
                 </Card>
             </div>
 
+            {/* Filters Section */}
+            <Card className="border mb-6">
+                <CardContent className="pt-6">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">Filters</span>
+                            {(selectedYear !== 'all' || selectedStatus !== 'all' || searchTerm) && (
+                                <span className="text-xs text-muted-foreground">
+                                    ({filteredSummaries.length} of {summaries.length})
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            {/* Year Filter */}
+                            <select
+                                className="px-3 py-2 border rounded-md text-sm min-w-[140px]"
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                            >
+                                <option value="all">All Years</option>
+                                {availableYears.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+
+                            {/* Status Filter */}
+                            <select
+                                className="px-3 py-2 border rounded-md text-sm min-w-[140px]"
+                                value={selectedStatus}
+                                onChange={(e) => setSelectedStatus(e.target.value)}
+                            >
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="paid">Paid</option>
+                            </select>
+
+                            {/* Search */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder="Search month..."
+                                    className="pl-9 pr-3 py-2 border rounded-md text-sm min-w-[180px]"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Clear Filters */}
+                            {(selectedYear !== 'all' || selectedStatus !== 'all' || searchTerm) && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setSelectedYear('all');
+                                        setSelectedStatus('all');
+                                        setSearchTerm('');
+                                    }}
+                                    className="gap-2"
+                                >
+                                    <X className="h-3 w-3" />
+                                    Clear
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Payroll Cycles */}
             <Card className="border">
                 <CardHeader>
@@ -181,8 +289,8 @@ const PayrollList = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {summaries?.map((payroll) => (
-                            <Link key={payroll._id} to={`/admin/payroll/${payroll._id}`}>
+                        {filteredSummaries?.map((payroll) => (
+                            <Link key={payroll.month || payroll._id} to={`/admin/payroll/${payroll.month || payroll._id}`}>
                                 <div className="group flex cursor-pointer items-center justify-between rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:bg-accent/50">
                                     <div className="flex flex-1 items-center gap-6">
                                         {/* Month Info */}
@@ -252,17 +360,38 @@ const PayrollList = () => {
                     </div>
 
                     {/* Empty State */}
-                    {summaries?.length === 0 && !loading && (
+                    {filteredSummaries?.length === 0 && !loading && (
                         <div className="flex flex-col items-center justify-center py-16">
                             <div className="rounded-full bg-muted p-6">
                                 <Calendar className="h-12 w-12 text-muted-foreground" />
                             </div>
-                            <h3 className="mt-4 text-lg font-semibold text-foreground">No payroll records yet</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">Get started by processing your first payroll</p>
-                            <Button className="mt-6 gap-2" onClick={() => setShowProcessModal(true)}>
-                                <Plus className="h-4 w-4" />
-                                Process First Payroll
-                            </Button>
+                            {summaries?.length === 0 ? (
+                                <>
+                                    <h3 className="mt-4 text-lg font-semibold text-foreground">No payroll records yet</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">Get started by processing your first payroll</p>
+                                    <Button className="mt-6 gap-2" onClick={() => setShowProcessModal(true)}>
+                                        <Plus className="h-4 w-4" />
+                                        Process First Payroll
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="mt-4 text-lg font-semibold text-foreground">No matching payroll records</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">Try adjusting your filters to see more results</p>
+                                    <Button
+                                        className="mt-6 gap-2"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setSelectedYear('all');
+                                            setSelectedStatus('all');
+                                            setSearchTerm('');
+                                        }}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Clear Filters
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     )}
                 </CardContent>
