@@ -2,8 +2,62 @@ import Notification from '../models/Notification.js';
 import { emitToUser, emitToAdmins } from '../config/socket.js';
 import Employee from '../models/Employee.js';
 
+// ============================================================================
+// EMPLOYEE NOTIFICATIONS (Stored in DB + Real-time via Socket)
+// ============================================================================
+
+/**
+ * Core function to create employee notification
+ * @param {ObjectId} employeeId - Employee to notify
+ * @param {String} type - Notification type
+ * @param {String} title - Notification title
+ * @param {String} message - Notification message
+ * @param {String} link - Optional link
+ */
+const createNotification = async (employeeId, type, title, message, link = null) => {
+  try {
+    // Check if this is an admin user - skip DB notification
+    const employee = await Employee.findById(employeeId);
+
+    if (!employee) {
+      console.warn(`⚠️ Employee ${employeeId} not found - cannot create notification`);
+      return { success: false, error: 'Employee not found' };
+    }
+
+    if (employee.role === 'admin') {
+      console.log(`⚠️ Skipping DB notification for admin user ${employeeId} (${employee.personalInfo.firstName})`);
+      return { success: true, skipped: true, reason: 'Admin user - no DB notifications' };
+    }
+
+    const notification = await Notification.create({
+      employeeId,
+      type,
+      title,
+      message,
+      link
+    });
+
+    // Emit real-time notification via Socket.io
+    emitToUser(employeeId.toString(), 'notification:new', {
+      _id: notification._id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      link: notification.link,
+      createdAt: notification.createdAt,
+      read: false
+    });
+
+    console.log(`✅ Notification sent to employee ${employeeId}`);
+    return { success: true, notification };
+  } catch (error) {
+    console.error('Notification creation failed:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Payslip Ready Notification
 export const createPayslipNotification = async (employeeId, payslipUrl, month, netSalary) => {
-  // Validation
   if (!employeeId) {
     console.error('Employee ID is required for notification');
     return { success: false, error: 'Employee ID is required' };
@@ -14,76 +68,79 @@ export const createPayslipNotification = async (employeeId, payslipUrl, month, n
     return { success: false, error: 'Invalid notification data' };
   }
 
-  try {
-    // Check if this employee is an admin-only user (no employee profile)
-    // Admins shouldn't get salary notifications
-    const employee = await Employee.findById(employeeId);
-    if (!employee || employee.role === 'admin') {
-      console.log(`⚠️  Skipping payslip notification for admin-only user ${employeeId}`);
-      return { success: true, skipped: true, reason: 'Admin-only user' };
-    }
-
-    const notification = await Notification.create({
-      employeeId,
-      type: 'payslip',
-      title: `Payslip Ready for ${month}`,
-      message: `Your salary of ₹${netSalary.toLocaleString('en-IN')} has been credited. Download your payslip now.`,
-      link: payslipUrl || null
-    });
-
-    // Emit real-time notification to the specific employee
-    emitToUser(employeeId.toString(), 'notification:new', {
-      _id: notification._id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      link: notification.link,
-      createdAt: notification.createdAt,
-      isRead: false
-    });
-
-    console.log(`✅ Real-time notification sent to employee ${employeeId}`);
-
-    return { success: true, notification };
-
-  } catch (error) {
-    console.error('Notification creation failed:', error.message);
-    return { success: false, error: error.message };
-  }
+  // Admin check is handled in createNotification
+  return await createNotification(
+    employeeId,
+    'PAYSLIP_READY',
+    `Payslip Ready for ${month}`,
+    `Your salary of ₹${netSalary.toLocaleString('en-IN')} has been credited. Download your payslip now.`,
+    payslipUrl
+  );
 };
 
+// Payment Success Notification
 export const createPaymentNotification = async (employeeId, month, amount) => {
   if (!employeeId || !month || amount === undefined) {
     console.error('Invalid payment notification data');
     return { success: false, error: 'Invalid data' };
   }
 
-  try {
-    const notification = await Notification.create({
-      employeeId,
-      type: 'payment',
-      title: 'Salary Credited',
-      message: `Your salary of ₹${amount.toLocaleString('en-IN')} for ${month} has been successfully credited to your account.`,
-      link: null
-    });
-
-    // Emit real-time notification
-    emitToUser(employeeId.toString(), 'notification:new', {
-      _id: notification._id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      createdAt: notification.createdAt,
-      isRead: false
-    });
-
-    return { success: true, notification };
-
-  } catch (error) {
-    console.error('Payment notification failed:', error.message);
-    return { success: false, error: error.message };
-  }
+  return await createNotification(
+    employeeId,
+    'PAYMENT_SUCCESS',
+    'Salary Credited',
+    `Your salary of ₹${amount.toLocaleString('en-IN')} for ${month} has been successfully credited to your account.`
+  );
 };
+
+// Leave Approved Notification (NEW)
+export const createLeaveApprovedNotification = async (employeeId, leaveData) => {
+  if (!employeeId || !leaveData) {
+    return { success: false, error: 'Invalid data' };
+  }
+
+  return await createNotification(
+    employeeId,
+    'LEAVE_APPROVED',
+    '✅ Leave Approved',
+    `Your ${leaveData.leaveType} leave from ${leaveData.startDate} to ${leaveData.endDate} (${leaveData.totalDays} days) has been approved.${leaveData.remarks ? ' Note: ' + leaveData.remarks : ''}`,
+    '/employee/leaves'
+  );
+};
+
+// Leave Rejected Notification (NEW)
+export const createLeaveRejectedNotification = async (employeeId, leaveData) => {
+  if (!employeeId || !leaveData) {
+    return { success: false, error: 'Invalid data' };
+  }
+
+  return await createNotification(
+    employeeId,
+    'LEAVE_REJECTED',
+    '❌ Leave Rejected',
+    `Your ${leaveData.leaveType} leave request (${leaveData.totalDays} days) has been rejected. Reason: ${leaveData.rejectionReason}`,
+    '/employee/leaves'
+  );
+};
+
+// Welcome Notification
+export const createWelcomeNotification = async (employeeId, employeeName) => {
+  if (!employeeId) {
+    return { success: false, error: 'Invalid data' };
+  }
+
+  return await createNotification(
+    employeeId,
+    'SYSTEM_ALERT',
+    'Welcome to PayrollPro',
+    `Welcome ${employeeName}! Your account has been created successfully. Please change your password on first login.`,
+    '/employee/profile'
+  );
+};
+
+// ============================================================================
+// NOTIFICATION QUERIES
+// ============================================================================
 
 export const getEmployeeNotifications = async (employeeId, limit = 20) => {
   try {
@@ -95,7 +152,6 @@ export const getEmployeeNotifications = async (employeeId, limit = 20) => {
       notifications,
       unreadCount
     };
-
   } catch (error) {
     console.error('Failed to fetch notifications:', error.message);
     return {
@@ -117,7 +173,6 @@ export const markNotificationAsRead = async (notificationId) => {
     await notification.save();
 
     return { success: true, notification };
-
   } catch (error) {
     console.error('Failed to mark notification as read:', error.message);
     return { success: false, error: error.message };
@@ -132,87 +187,92 @@ export const markAllAsRead = async (employeeId) => {
     );
 
     return { success: true, modifiedCount: result.modifiedCount };
-
   } catch (error) {
     console.error('Failed to mark all as read:', error.message);
     return { success: false, error: error.message };
   }
 };
 
-// Admin Notification - New Leave Request
-export const notifyAdminsNewLeave = (leaveData) => {
+// ============================================================================
+// ADMIN TOAST NOTIFICATIONS (Socket only, no DB persistence)
+// ============================================================================
+
+/**
+ * Generic admin toast notification
+ * @param {String} type - Notification type
+ * @param {String} title - Title
+ * @param {String} message - Message
+ * @param {Object} data - Additional data
+ */
+const notifyAdmins = (type, title, message, data = {}) => {
   const notification = {
-    type: 'leave',
-    title: '📋 New Leave Request',
-    message: `${leaveData.employeeName} applied for ${leaveData.leaveType} (${leaveData.totalDays} days)`,
-    data: leaveData
+    type,
+    title,
+    message,
+    data,
+    timestamp: new Date()
   };
 
-  emitToAdmins('admin:notification', notification);
-  console.log('✅ Admin notified of new leave request');
+  emitToAdmins('admin:toast', notification);
+  console.log(`✅ Admin toast: ${message}`);
+};
+
+// Admin Notification - New Leave Request
+export const notifyAdminsNewLeave = (leaveData) => {
+  notifyAdmins(
+    'leave',
+    '📋 New Leave Request',
+    `${leaveData.employeeName} applied for ${leaveData.leaveType} (${leaveData.totalDays} days)`,
+    leaveData
+  );
 };
 
 // Admin Notification - New Employee
 export const notifyAdminsNewEmployee = (employeeData) => {
-  const notification = {
-    type: 'employee',
-    title: '👤 New Employee Added',
-    message: `${employeeData.name} (${employeeData.employeeId}) joined ${employeeData.department}`,
-    data: employeeData
-  };
-
-  emitToAdmins('admin:notification', notification);
-  console.log('✅ Admin notified of new employee');
+  notifyAdmins(
+    'employee',
+    '👤 New Employee Added',
+    `${employeeData.name} (${employeeData.employeeId}) joined ${employeeData.department}`,
+    employeeData
+  );
 };
 
 // Admin Notification - Payroll Approved
 export const notifyAdminsPayrollApproved = (approvalData) => {
-  const notification = {
-    type: 'payroll_approved',
-    title: '✅ Payroll Approved',
-    message: `${approvalData.approvedBy} approved payroll for ${approvalData.employeeName} (${approvalData.month})`,
-    data: approvalData
-  };
-
-  emitToAdmins('admin:notification', notification);
-  console.log('✅ Admin notified of payroll approval');
+  notifyAdmins(
+    'payroll_approved',
+    '✅ Payroll Approved',
+    `${approvalData.approvedBy} approved payroll for ${approvalData.employeeName} (${approvalData.month})`,
+    approvalData
+  );
 };
 
 // Admin Notification - Payroll Paid
 export const notifyAdminsPayrollPaid = (paymentData) => {
-  const notification = {
-    type: 'payroll_paid',
-    title: '💰 Payment Processed',
-    message: `${paymentData.employeeName} paid ₹${paymentData.amount.toLocaleString('en-IN')} for ${paymentData.month}`,
-    data: paymentData
-  };
-
-  emitToAdmins('admin:notification', notification);
-  console.log('✅ Admin notified of payment processing');
+  notifyAdmins(
+    'payroll_paid',
+    '💰 Payment Processed',
+    `${paymentData.employeeName} paid ₹${paymentData.amount.toLocaleString('en-IN')} for ${paymentData.month}`,
+    paymentData
+  );
 };
 
 // Admin Notification - Leave Approved/Rejected
 export const notifyAdminsLeaveDecision = (decisionData) => {
-  const notification = {
-    type: 'leave_decision',
-    title: decisionData.status === 'Approved' ? '✅ Leave Approved' : '❌ Leave Rejected',
-    message: `${decisionData.adminName} ${decisionData.status.toLowerCase()} ${decisionData.employeeName}'s ${decisionData.leaveType} request`,
-    data: decisionData
-  };
-
-  emitToAdmins('admin:notification', notification);
-  console.log(`✅ Admin notified of leave ${decisionData.status}`);
+  notifyAdmins(
+    'leave_decision',
+    decisionData.status === 'Approved' ? '✅ Leave Approved' : '❌ Leave Rejected',
+    `${decisionData.adminName} ${decisionData.status.toLowerCase()} ${decisionData.employeeName}'s ${decisionData.leaveType} request`,
+    decisionData
+  );
 };
 
 // Admin Notification - Bulk Payroll Completed
 export const notifyAdminsBulkPayroll = (bulkData) => {
-  const notification = {
-    type: 'bulk_payroll',
-    title: '💵 Bulk Payment Complete',
-    message: `${bulkData.successful} employees paid for ${bulkData.month}. Total: ₹${bulkData.totalAmount.toLocaleString('en-IN')}`,
-    data: bulkData
-  };
-
-  emitToAdmins('admin:notification', notification);
-  console.log('✅ Admin notified of bulk payroll completion');
+  notifyAdmins(
+    'bulk_payroll',
+    '💵 Bulk Payment Complete',
+    `${bulkData.successful} employees paid for ${bulkData.month}. Total: ₹${bulkData.totalAmount.toLocaleString('en-IN')}`,
+    bulkData
+  );
 };

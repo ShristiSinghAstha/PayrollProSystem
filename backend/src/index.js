@@ -12,6 +12,9 @@ import payslipRoutes from './routes/payslipRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
 import bulkRoutes from './routes/bulkRoutes.js';
+import attendanceRoutes from './routes/attendanceRoutes.js';
+import taxRoutes from './routes/taxRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -45,6 +48,7 @@ app.get('/', (req, res) => {
             payslipGeneration: 'Active',
             notifications: 'Active',
             leaveManagement: 'Active',
+            attendanceTracking: 'Active',
             realTimeUpdates: 'Active'
         }
     });
@@ -57,6 +61,9 @@ app.use('/api/payslips', payslipRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/bulk', bulkRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/tax', taxRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

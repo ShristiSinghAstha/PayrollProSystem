@@ -101,3 +101,49 @@ export const calculateYearlyCTC = (salaryStructure) => {
   const monthlySalary = calculateSalary(salaryStructure);
   return roundToTwo(monthlySalary.earnings.gross * 12);
 };
+
+/**
+ * Calculate LOP (Loss of Pay) days from attendance records
+ * @param {string} employeeId - Employee ID
+ * @param {number} month - Month (1-12)
+ * @param {number} year - Year
+ * @returns {Promise<number>} - Number of LOP days
+ */
+export const calculateLOPFromAttendance = async (employeeId, month, year) => {
+  // Dynamic import to avoid circular dependency
+  const Attendance = (await import('../models/Attendance.js')).default;
+  const Leave = (await import('../models/Leave.js')).default;
+
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+
+  // Get all attendance records for the month
+  const attendanceRecords = await Attendance.find({
+    employeeId,
+    date: { $gte: startDate, $lte: endDate }
+  });
+
+  // Count working days: Present + Half-Day (0.5) + Leave
+  let workingDays = 0;
+  attendanceRecords.forEach(record => {
+    if (record.status === 'Present') {
+      workingDays += 1;
+    } else if (record.status === 'Half-Day') {
+      workingDays += 0.5;
+    } else if (record.status === 'Leave') {
+      workingDays += 1; // Approved leaves are paid
+    }
+    // Absent, Weekend, Holiday don't count
+  });
+
+  // Calculate expected working days (excluding weekends and holidays)
+  const totalDays = new Date(year, month, 0).getDate();
+  const weekends = attendanceRecords.filter(r => r.status === 'Weekend').length;
+  const holidays = attendanceRecords.filter(r => r.status === 'Holiday').length;
+  const expectedWorkingDays = totalDays - weekends - holidays;
+
+  // LOP days = Expected working days - Actual working days
+  const lopDays = Math.max(0, expectedWorkingDays - workingDays);
+
+  return roundToTwo(lopDays);
+};

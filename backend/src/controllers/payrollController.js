@@ -1,7 +1,7 @@
 import Payroll from '../models/Payroll.js';
 import Employee from '../models/Employee.js';
 import { asyncHandler, AppError } from '../middlewares/errorHandler.js';
-import { calculateSalary } from '../utils/salaryCalculator.js';
+import { calculateSalary, calculateLOPFromAttendance } from '../utils/salaryCalculator.js';
 import { logPayrollProcess, logPayrollApproval } from '../utils/auditLogger.js';
 import { generatePayslipPDF, uploadPDFToCloudinary } from '../utils/pdfGenerator.js';
 import { sendPayslipEmail } from '../utils/emailService.js';
@@ -63,9 +63,14 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
 
     for (const employee of employeesToProcess) {
         try {
-            // Get LOP days for this month from Leave model
-            const Leave = (await import('../models/Leave.js')).default;
-            const lopDays = await Leave.getLOPDaysForMonth(employee._id, year, month);
+            // Calculate LOP days from attendance records
+            let lopDays = 0;
+            try {
+                lopDays = await calculateLOPFromAttendance(employee._id, month, year);
+            } catch (attendanceError) {
+                console.warn(`Could not calculate LOP from attendance for employee ${employee.employeeId}, using 0:`, attendanceError.message);
+                lopDays = 0;
+            }
 
             // Calculate salary with LOP deduction
             const salaryBreakdown = calculateSalary(employee.salaryStructure, { lopDays });
@@ -82,7 +87,7 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
                 adjustments: lopDays > 0 ? [{
                     type: 'LOP',
                     amount: salaryBreakdown.deductions.lop,
-                    reason: `${lopDays} day(s) Leave without Pay`,
+                    reason: `${lopDays} day(s) Loss of Pay (based on attendance)`,
                     appliedBy: 'SYSTEM'
                 }] : []
             });
@@ -561,5 +566,45 @@ export const getMonthlyPayrollSummary = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         data: summaries
+    });
+});
+
+// Get average salary by department (Admin)
+export const getSalaryByDepartment = asyncHandler(async (req, res) => {
+    const { month, year = new Date().getFullYear() } = req.query;
+
+    const matchStage = { status: 'Paid' };
+    if (month) {
+        const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+        matchStage.month = monthStr;
+    }
+
+    const stats = await Payroll.aggregate([
+        { $match: matchStage },
+        {
+            $lookup: {
+                from: 'employees',
+                localField: 'employeeId',
+                foreignField: '_id',
+                as: 'employee'
+            }
+        },
+        { $unwind: '$employee' },
+        {
+            $group: {
+                _id: '$employee.employment.department',
+                avgSalary: { $avg: '$netSalary' },
+                totalEmployees: { $sum: 1 },
+                totalPayout: { $sum: '$netSalary' },
+                minSalary: { $min: '$netSalary' },
+                maxSalary: { $max: '$netSalary' }
+            }
+        },
+        { $sort: { avgSalary: -1 } }
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: stats
     });
 });

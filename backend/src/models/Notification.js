@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema({
 
   type: {
     type: String,
-    enum: ['PAYSLIP_READY', 'PAYMENT_SUCCESS', 'SYSTEM_ALERT'],
+    enum: ['PAYSLIP_READY', 'PAYMENT_SUCCESS', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'SYSTEM_ALERT'],
     required: true
   },
 
@@ -50,16 +50,16 @@ const notificationSchema = new mongoose.Schema({
 notificationSchema.index({ employeeId: 1, createdAt: -1 });
 notificationSchema.index({ employeeId: 1, read: 1 });
 
-notificationSchema.methods.markAsRead = function() {
+notificationSchema.methods.markAsRead = function () {
   this.read = true;
   this.readAt = new Date();
 };
 
-notificationSchema.statics.getUnreadCount = function(employeeId) {
+notificationSchema.statics.getUnreadCount = function (employeeId) {
   return this.countDocuments({ employeeId, read: false });
 };
 
-notificationSchema.statics.getEmployeeNotifications = function(employeeId, limit = 20) {
+notificationSchema.statics.getEmployeeNotifications = function (employeeId, limit = 20) {
   return this.find({ employeeId })
     .sort({ createdAt: -1 })
     .limit(limit)
