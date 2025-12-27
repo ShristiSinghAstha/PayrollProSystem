@@ -1,7 +1,18 @@
 import axios from './axios';
 
+// Step 1: Login with email/password (sends OTP)
 export const login = (credentials) => {
   return axios.post('/api/auth/login', credentials);
+};
+
+// Step 2: Verify OTP and complete login
+export const verifyOTP = (email, otp) => {
+  return axios.post('/api/auth/verify-otp', { email, otp });
+};
+
+// Resend OTP
+export const resendOTP = (email) => {
+  return axios.post('/api/auth/resend-otp', { email });
 };
 
 export const logout = () => {

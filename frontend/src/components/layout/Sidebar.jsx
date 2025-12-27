@@ -22,7 +22,7 @@ const Sidebar = () => {
     { name: 'Employees', path: '/admin/employees', icon: Users },
     { name: 'Payroll', path: '/admin/payroll', icon: Wallet },
     { name: 'Leaves', path: '/admin/leaves', icon: Calendar },
-    { name: 'Reviews', path: '/admin/reviews', icon: BarChart3 },
+    // { name: 'Reviews', path: '/admin/reviews', icon: BarChart3 },
     { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
@@ -33,7 +33,7 @@ const Sidebar = () => {
     { name: 'My Leaves', path: '/employee/leaves', icon: Calendar },
     { name: 'Attendance', path: '/employee/attendance', icon: Clock },
     { name: 'Tax Declarations', path: '/employee/tax-declarations', icon: FileText },
-    { name: 'My Reviews', path: '/employee/reviews', icon: BarChart3 },
+    // { name: 'My Reviews', path: '/employee/reviews', icon: BarChart3 },
     { name: 'Notifications', path: '/employee/notifications', icon: Bell },
     { name: 'Profile', path: '/employee/profile', icon: User },
   ];

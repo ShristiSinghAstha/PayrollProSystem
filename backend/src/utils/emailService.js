@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { generatePayslipEmail } from './emailTemplates.js';
+import { generatePayslipEmail, generateOTPEmail } from './emailTemplates.js';
 import dayjs from 'dayjs';
 
 const transporter = nodemailer.createTransport({
@@ -224,6 +224,40 @@ export const sendPasswordResetEmail = async (employeeEmail, data) => {
       success: false,
       error: error.message
     };
+  }
+};
+
+/**
+ * Send OTP email
+ */
+export const sendOTPEmail = async (email, otp, userName) => {
+  if (!email || !validateEmail(email)) {
+    throw new Error('Invalid email address');
+  }
+
+  if (!otp) {
+    throw new Error('OTP is required');
+  }
+
+  const htmlContent = generateOTPEmail(otp, userName);
+
+  const mailOptions = {
+    from: `"PayrollPro" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'Your Login OTP - PayrollPro',
+    html: htmlContent
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP email sent successfully to ${email}`);
+    return {
+      success: true,
+      messageId: info.messageId
+    };
+  } catch (error) {
+    console.error('❌ Failed to send OTP email:', error);
+    throw new Error(`Failed to send OTP email: ${error.message}`);
   }
 };
 

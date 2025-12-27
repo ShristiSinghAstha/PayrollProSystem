@@ -159,4 +159,92 @@ const generatePayslipEmail = (data) => {
   `.trim();
 };
 
+/**
+ * Generate professional HTML email for OTP delivery
+ */
+export const generateOTPEmail = (otp, userName) => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login OTP - PayrollPro</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
+                PayrollPro
+              </h1>
+              <p style="margin: 8px 0 0; color: #e0e7ff; font-size: 14px; font-weight: 500;">
+                Secure Login Verification
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <p style="margin: 0 0 24px; color: #18181b; font-size: 16px; line-height: 1.5;">
+                Hello <strong>${userName || 'User'}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 32px; color: #52525b; font-size: 15px; line-height: 1.6;">
+                Your One-Time Password (OTP) for logging into PayrollPro is:
+              </p>
+
+              <!-- OTP Display -->
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 32px; text-align: center; margin-bottom: 32px;">
+                <div style="font-size: 48px; font-weight: 700; color: #ffffff; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                  ${otp}
+                </div>
+                <p style="margin: 16px 0 0; color: #e0e7ff; font-size: 13px;">
+                  This OTP is valid for 5 minutes
+                </p>
+              </div>
+
+              <!-- Instructions -->
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
+                <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
+                  <strong>⚠️ Security Notice:</strong><br>
+                  Never share this OTP with anyone. PayrollPro staff will never ask for your OTP.
+                </p>
+              </div>
+
+              <p style="margin: 0 0 16px; color: #52525b; font-size: 14px; line-height: 1.6;">
+                If you didn't request this OTP, please ignore this email or contact your administrator immediately.
+              </p>
+
+              <p style="margin: 0; color: #71717a; font-size: 13px; line-height: 1.5;">
+                This is an automated email. Please do not reply to this message.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #fafafa; border-radius: 0 0 12px 12px; border-top: 1px solid #e4e4e7;">
+              <p style="margin: 0; color: #a1a1aa; font-size: 12px; text-align: center; line-height: 1.5;">
+                © ${new Date().getFullYear()} PayrollPro. All rights reserved.<br>
+                Professional Payroll Management System
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+};
+
 export { generatePayslipEmail };

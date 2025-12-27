@@ -2,7 +2,8 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Employee from '../models/Employee.js';
 import { asyncHandler, AppError } from '../middlewares/errorHandler.js';
-import { sendPasswordResetEmail } from '../utils/emailService.js';
+import { sendPasswordResetEmail, sendOTPEmail } from '../utils/emailService.js';
+import { createOTP, verifyOTP as verifyOTPUtil, maskEmail, canRequestOTP } from '../utils/otpService.js';
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -10,11 +11,18 @@ const generateToken = (id) => {
     });
 };
 
+// Step 1: Login with email and password - Send OTP
 export const login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
         throw new AppError('Please provide email and password', 400);
+    }
+
+    // Check rate limiting
+    const canRequest = await canRequestOTP(email);
+    if (!canRequest) {
+        throw new AppError('Too many OTP requests. Please try again after 15 minutes', 429);
     }
 
     const user = await Employee.findOne({ 'personalInfo.email': email })
@@ -34,11 +42,48 @@ export const login = asyncHandler(async (req, res) => {
         throw new AppError('Invalid email or password', 401);
     }
 
+    // Generate and send OTP
+    const otpCode = await createOTP(email);
+
+    // Send OTP via email
+    const userName = `${user.personalInfo.firstName} ${user.personalInfo.lastName}`;
+    await sendOTPEmail(email, otpCode, userName);
+
+    res.status(200).json({
+        success: true,
+        message: 'OTP has been sent to your email',
+        email: maskEmail(email)
+    });
+});
+
+// Step 2: Verify OTP and complete login
+export const verifyOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        throw new AppError('Please provide email and OTP', 400);
+    }
+
+    // Verify OTP
+    const verification = await verifyOTPUtil(email, otp);
+
+    if (!verification.success) {
+        throw new AppError(verification.message, 401);
+    }
+
+    // OTP is valid - fetch user and complete login
+    const user = await Employee.findOne({ 'personalInfo.email': email });
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    // Update last login
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
+    // Generate JWT token
     const token = generateToken(user._id);
-
     const userData = user.getPublicProfile();
 
     res.status(200).json({
@@ -48,6 +93,37 @@ export const login = asyncHandler(async (req, res) => {
         data: {
             user: userData
         }
+    });
+});
+
+// Resend OTP
+export const resendOTP = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new AppError('Please provide email', 400);
+    }
+
+    // Check rate limiting
+    const canRequest = await canRequestOTP(email);
+    if (!canRequest) {
+        throw new AppError('Too many OTP requests. Please try again after 15 minutes', 429);
+    }
+
+    const user = await Employee.findOne({ 'personalInfo.email': email });
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    // Generate and send new OTP
+    const otpCode = await createOTP(email);
+    const userName = `${user.personalInfo.firstName} ${user.personalInfo.lastName}`;
+    await sendOTPEmail(email, otpCode, userName);
+
+    res.status(200).json({
+        success: true,
+        message: 'New OTP has been sent to your email'
     });
 });
 

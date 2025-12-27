@@ -4,6 +4,44 @@ import { asyncHandler, AppError } from '../middlewares/errorHandler.js';
 
 // Create new performance review
 export const createReview = asyncHandler(async (req, res) => {
+    const { employeeId, reviewPeriod, ratings } = req.body;
+
+    // Validation
+    if (!employeeId) {
+        throw new AppError('Employee ID is required', 400);
+    }
+
+    if (!reviewPeriod?.startDate || !reviewPeriod?.endDate) {
+        throw new AppError('Review period start and end dates are required', 400);
+    }
+
+    // Validate dates
+    const startDate = new Date(reviewPeriod.startDate);
+    const endDate = new Date(reviewPeriod.endDate);
+
+    if (endDate <= startDate) {
+        throw new AppError('End date must be after start date', 400);
+    }
+
+    // Validate employee exists
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+        throw new AppError('Employee not found', 404);
+    }
+
+    // Validate rating scores if provided
+    if (ratings) {
+        const ratingKeys = ['technicalSkills', 'communication', 'teamwork', 'productivity', 'initiative'];
+        for (const key of ratingKeys) {
+            if (ratings[key]?.score) {
+                const score = ratings[key].score;
+                if (score < 1 || score > 5) {
+                    throw new AppError(`${key} score must be between 1 and 5`, 400);
+                }
+            }
+        }
+    }
+
     const review = await PerformanceReview.create({
         ...req.body,
         reviewedBy: req.user._id
@@ -70,6 +108,11 @@ export const updateReview = asyncHandler(async (req, res) => {
 
     if (!review) {
         throw new AppError('Review not found', 404);
+    }
+
+    // Permission check: Only the reviewer who created it can update
+    if (review.reviewedBy.toString() !== req.user._id.toString()) {
+        throw new AppError('You are not authorized to update this review', 403);
     }
 
     // Only allow updates if not completed or acknowledged

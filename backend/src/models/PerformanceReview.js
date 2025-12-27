@@ -121,6 +121,13 @@ const performanceReviewSchema = new mongoose.Schema({
 // Compound index
 performanceReviewSchema.index({ employeeId: 1, reviewPeriod: 1 });
 
+// Unique constraint: Prevent duplicate reviews for same period
+performanceReviewSchema.index({
+    employeeId: 1,
+    'reviewPeriod.startDate': 1,
+    'reviewPeriod.endDate': 1
+}, { unique: true });
+
 // Pre-save hook: Calculate overall rating
 performanceReviewSchema.pre('save', function () {
     if (this.ratings) {

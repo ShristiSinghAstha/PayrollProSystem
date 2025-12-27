@@ -13,6 +13,7 @@ const PerformanceReviews = () => {
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
     const [formData, setFormData] = useState({
         employeeId: '',
         reviewType: 'Quarterly',
@@ -45,11 +46,12 @@ const PerformanceReviews = () => {
         fetchEmployees();
     }, []);
 
-    const fetchReviews = async () => {
+    const fetchReviews = async (page = 1) => {
         try {
             setLoading(true);
-            const response = await getAllReviews();
+            const response = await getAllReviews({ page, limit: 20 });
             setReviews(response.data.data);
+            setPagination(response.data.pagination);
         } catch (error) {
             message.error('Failed to fetch reviews');
         } finally {
@@ -342,9 +344,9 @@ const PerformanceReviews = () => {
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-2">
                                         <h3 className="text-lg font-semibold">
-                                            {review.employeeId?.personalInfo?.firstName} {review.employeeId?.personalInfo?.lastName}
+                                            {review.employeeId?.personalInfo?.firstName || 'Unknown'} {review.employeeId?.personalInfo?.lastName || 'Employee'}
                                         </h3>
-                                        <span className="text-sm text-muted-foreground">({review.employeeId?.employeeId})</span>
+                                        <span className="text-sm text-muted-foreground">({review.employeeId?.employeeId || 'N/A'})</span>
                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(review.status)}`}>
                                             {review.status}
                                         </span>
@@ -356,7 +358,9 @@ const PerformanceReviews = () => {
                                         </div>
                                         <div>
                                             <p className="text-muted-foreground">Period</p>
-                                            <p className="font-semibold">{dayjs(review.reviewPeriod.endDate).format('MMM YYYY')}</p>
+                                            <p className="font-semibold">
+                                                {review.reviewPeriod?.endDate ? dayjs(review.reviewPeriod.endDate).format('MMM YYYY') : 'N/A'}
+                                            </p>
                                         </div>
                                         <div>
                                             <p className="text-muted-foreground">Overall Rating</p>
@@ -380,6 +384,34 @@ const PerformanceReviews = () => {
                         </CardContent>
                     </Card>
                 ))}
+
+                {/* Pagination */}
+                {pagination.pages > 1 && (
+                    <div className="flex items-center justify-between mt-6">
+                        <div className="text-sm text-muted-foreground">
+                            Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} reviews
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.page === 1}
+                                onClick={() => fetchReviews(pagination.page - 1)}
+                            >
+                                Previous
+                            </Button>
+                            <span className="px-4 py-2 text-sm">Page {pagination.page} of {pagination.pages}</span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.page === pagination.pages}
+                                onClick={() => fetchReviews(pagination.page + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
         </PageContainer>
     );

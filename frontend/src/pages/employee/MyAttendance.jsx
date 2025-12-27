@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, LogIn, LogOut, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { Clock, Calendar, CheckCircle, AlertCircle, Info } from "lucide-react";
 import dayjs from 'dayjs';
 import PageContainer from '@/components/layout/PageContainer';
 import { checkIn, checkOut, getMyAttendance } from '@/api/attendanceApi';
@@ -11,8 +11,6 @@ const MyAttendance = () => {
     const [attendance, setAttendance] = useState([]);
     const [todayRecord, setTodayRecord] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [checkingIn, setCheckingIn] = useState(false);
-    const [checkingOut, setCheckingOut] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(dayjs().format('YYYY-MM'));
 
     useEffect(() => {
@@ -36,32 +34,6 @@ const MyAttendance = () => {
             message.error('Failed to fetch attendance');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleCheckIn = async () => {
-        try {
-            setCheckingIn(true);
-            await checkIn('Office');
-            message.success('Checked in successfully!');
-            fetchAttendance();
-        } catch (error) {
-            message.error(error.response?.data?.message || 'Failed to check in');
-        } finally {
-            setCheckingIn(false);
-        }
-    };
-
-    const handleCheckOut = async () => {
-        try {
-            setCheckingOut(true);
-            await checkOut('Office');
-            message.success('Checked out successfully!');
-            fetchAttendance();
-        } catch (error) {
-            message.error(error.response?.data?.message || 'Failed to check out');
-        } finally {
-            setCheckingOut(false);
         }
     };
 
@@ -95,100 +67,239 @@ const MyAttendance = () => {
                 </div>
             </div>
 
-            {/* Check-in/out Card */}
-            <Card className="border mb-8">
-                <CardHeader>
-                    <CardTitle>Today's Attendance</CardTitle>
-                    <CardDescription>{dayjs().format('dddd, MMMM D, YYYY')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4 items-center">
-                        {!todayRecord?.checkIn ? (
-                            <Button size="lg" onClick={handleCheckIn} disabled={checkingIn} className="gap-2">
-                                <LogIn className="h-5 w-5" />
-                                {checkingIn ? 'Checking In...' : 'Check In'}
-                            </Button>
-                        ) : (
-                            <div className="flex-1">
-                                <div className="flex items-center gap-3 text-green-600">
-                                    <CheckCircle className="h-5 w-5" />
-                                    <div>
-                                        <p className="font-semibold">Checked In</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {dayjs(todayRecord.checkIn.time).format('h:mm A')}
-                                        </p>
+            {/* Main Content - 2 Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                {/* Left: Calendar (2/3 width) */}
+                <div className="lg:col-span-2">
+                    <Card className="border">
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-lg">Attendance Calendar</CardTitle>
+                                    <CardDescription className="text-xs">{dayjs(currentMonth).format('MMMM YYYY')}</CardDescription>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-2"
+                                        onClick={() => setCurrentMonth(dayjs(currentMonth).subtract(1, 'month').format('YYYY-MM'))}
+                                    >
+                                        ‹
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-3 text-xs"
+                                        onClick={() => setCurrentMonth(dayjs().format('YYYY-MM'))}
+                                    >
+                                        Today
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-2"
+                                        onClick={() => setCurrentMonth(dayjs(currentMonth).add(1, 'month').format('YYYY-MM'))}
+                                    >
+                                        ›
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                            {/* Calendar Grid */}
+                            <div className="space-y-2">
+                                {/* Day Labels */}
+                                <div className="grid grid-cols-7 gap-1">
+                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                                        <div key={i} className="text-center text-[10px] font-semibold text-muted-foreground py-1">
+                                            {day}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Calendar Days */}
+                                <div className="grid grid-cols-7 gap-1">
+                                    {(() => {
+                                        const firstDay = dayjs(currentMonth).startOf('month');
+                                        const lastDay = dayjs(currentMonth).endOf('month');
+                                        const daysInMonth = lastDay.date();
+                                        const startDayOfWeek = firstDay.day();
+                                        const days = [];
+
+                                        // Empty cells
+                                        for (let i = 0; i < startDayOfWeek; i++) {
+                                            days.push(<div key={`empty-${i}`} className="aspect-square" />);
+                                        }
+
+                                        // Days
+                                        for (let day = 1; day <= daysInMonth; day++) {
+                                            const date = dayjs(currentMonth).date(day);
+                                            const dateStr = date.format('YYYY-MM-DD');
+                                            const record = attendance.find(rec => dayjs(rec.date).format('YYYY-MM-DD') === dateStr);
+                                            const isToday = date.isSame(dayjs(), 'day');
+
+                                            let bgColor = 'bg-muted/30';
+                                            let dotColor = null;
+
+                                            if (record) {
+                                                switch (record.status) {
+                                                    case 'Present':
+                                                        bgColor = 'bg-green-50 dark:bg-green-950/20';
+                                                        dotColor = 'bg-green-500';
+                                                        break;
+                                                    case 'Absent':
+                                                        bgColor = 'bg-red-50 dark:bg-red-950/20';
+                                                        dotColor = 'bg-red-500';
+                                                        break;
+                                                    case 'Half-Day':
+                                                        bgColor = 'bg-yellow-50 dark:bg-yellow-950/20';
+                                                        dotColor = 'bg-yellow-500';
+                                                        break;
+                                                    case 'Leave':
+                                                        bgColor = 'bg-blue-50 dark:bg-blue-950/20';
+                                                        dotColor = 'bg-blue-500';
+                                                        break;
+                                                    case 'Holiday':
+                                                        bgColor = 'bg-purple-50 dark:bg-purple-950/20';
+                                                        dotColor = 'bg-purple-500';
+                                                        break;
+                                                }
+                                            }
+
+                                            days.push(
+                                                <div
+                                                    key={day}
+                                                    className={`aspect-square rounded border transition-all hover:shadow-sm cursor-pointer ${bgColor} ${isToday ? 'ring-1 ring-primary' : 'border-border'
+                                                        }`}
+                                                    title={record?.status || ''}
+                                                >
+                                                    <div className="h-full flex flex-col items-center justify-center p-0.5">
+                                                        <span className={`text-[11px] font-medium ${isToday ? 'text-primary' : 'text-foreground'
+                                                            }`}>
+                                                            {day}
+                                                        </span>
+                                                        {dotColor && (
+                                                            <div className={`w-1 h-1 rounded-full mt-0.5 ${dotColor}`} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return days;
+                                    })()}
+                                </div>
+
+                                {/* Compact Legend */}
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 pt-2 border-t text-[10px]">
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                                        <span className="text-muted-foreground">Present</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                                        <span className="text-muted-foreground">Absent</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                                        <span className="text-muted-foreground">Half-Day</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                        <span className="text-muted-foreground">Leave</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                        <span className="text-muted-foreground">Holiday</span>
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        </CardContent>
+                    </Card>
+                </div>
 
-                        {todayRecord?.checkIn && !todayRecord?.checkOut && (
-                            <Button size="lg" onClick={handleCheckOut} disabled={checkingOut} variant="outline" className="gap-2">
-                                <LogOut className="h-5 w-5" />
-                                {checkingOut ? 'Checking Out...' : 'Check Out'}
-                            </Button>
-                        )}
-
-                        {todayRecord?.checkOut && (
-                            <div className="flex-1">
-                                <div className="flex items-center gap-3 text-blue-600">
-                                    <CheckCircle className="h-5 w-5" />
-                                    <div>
-                                        <p className="font-semibold">Checked Out</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {dayjs(todayRecord.checkOut.time).format('h:mm A')} • {todayRecord.workHours.toFixed(1)} hrs
-                                        </p>
-                                    </div>
+                {/* Right: Today + Stats (1/3 width) */}
+                <div className="space-y-4">
+                    {/* Today's Status */}
+                    <Card className="border">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm">Today</CardTitle>
+                            <CardDescription className="text-xs">{dayjs().format('MMM D, YYYY')}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {todayRecord ? (
+                                <>
+                                    {todayRecord.checkIn && (
+                                        <div className="flex items-center gap-2">
+                                            <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-1.5">
+                                                <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[10px] text-muted-foreground">Check In</p>
+                                                <p className="text-sm font-semibold">{dayjs(todayRecord.checkIn.time).format('h:mm A')}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {todayRecord.checkOut && (
+                                        <div className="flex items-center gap-2">
+                                            <div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-1.5">
+                                                <CheckCircle className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[10px] text-muted-foreground">Check Out</p>
+                                                <p className="text-sm font-semibold">{dayjs(todayRecord.checkOut.time).format('h:mm A')}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {todayRecord.workHours && (
+                                        <div className="flex items-center gap-2 pt-2 border-t">
+                                            <Clock className="h-3 w-3 text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">Work Hours:</span>
+                                            <span className="text-sm font-semibold ml-auto">{todayRecord.workHours.toFixed(1)}h</span>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <Clock className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                                    <p className="text-xs text-muted-foreground">No record</p>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
+                            )}
+                        </CardContent>
+                    </Card>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <Card className="border">
-                    <CardContent className="pt-6">
-                        <p className="text-sm text-muted-foreground">Present</p>
-                        <p className="text-2xl font-semibold text-foreground mt-2">{stats.Present || 0}</p>
-                    </CardContent>
-                </Card>
-                <Card className="border">
-                    <CardContent className="pt-6">
-                        <p className="text-sm text-muted-foreground">Absent</p>
-                        <p className="text-2xl font-semibold text-foreground mt-2">{stats.Absent || 0}</p>
-                    </CardContent>
-                </Card>
-                <Card className="border">
-                    <CardContent className="pt-6">
-                        <p className="text-sm text-muted-foreground">Late Days</p>
-                        <p className="text-2xl font-semibold text-foreground mt-2">{stats.late || 0}</p>
-                    </CardContent>
-                </Card>
-                <Card className="border">
-                    <CardContent className="pt-6">
-                        <p className="text-sm text-muted-foreground">Total Hours</p>
-                        <p className="text-2xl font-semibold text-foreground mt-2">{(stats.totalHours || 0).toFixed(0)}</p>
-                    </CardContent>
-                </Card>
+                    {/* Stats */}
+                    <Card className="border">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm">This Month</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Present</span>
+                                <span className="text-lg font-semibold text-green-600">{stats.Present || 0}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Absent</span>
+                                <span className="text-lg font-semibold text-red-600">{stats.Absent || 0}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Late Days</span>
+                                <span className="text-lg font-semibold text-yellow-600">{stats.late || 0}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t">
+                                <span className="text-xs text-muted-foreground">Total Hours</span>
+                                <span className="text-lg font-semibold">{(stats.totalHours || 0).toFixed(0)}h</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
-            {/* Attendance History */}
+            {/* Attendance History Table */}
             <Card className="border">
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Attendance History</CardTitle>
-                            <CardDescription>Your attendance records for {dayjs(currentMonth).format('MMMM YYYY')}</CardDescription>
-                        </div>
-                        <input
-                            type="month"
-                            value={currentMonth}
-                            onChange={(e) => setCurrentMonth(e.target.value)}
-                            className="px-3 py-2 border rounded-md"
-                        />
-                    </div>
+                    <CardTitle>Detailed Records</CardTitle>
+                    <CardDescription>Complete attendance log for {dayjs(currentMonth).format('MMMM YYYY')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto">

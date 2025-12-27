@@ -6,13 +6,19 @@ import {
     changePassword,
     updateProfile,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    verifyOTP,
+    resendOTP
 } from '../controllers/authController.js';
 import { protect } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.post('/login', login);
+// OTP-based login routes
+router.post('/login', login);                    // Step 1: Send OTP
+router.post('/verify-otp', verifyOTP);           // Step 2: Verify OTP & Login
+router.post('/resend-otp', resendOTP);           // Resend OTP
+
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.put('/change-password', protect, changePassword);
