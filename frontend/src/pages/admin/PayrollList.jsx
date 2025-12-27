@@ -15,6 +15,13 @@ const PayrollList = () => {
     const [showProcessModal, setShowProcessModal] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState('');
+    const [filters, setFilters] = useState({
+        dateFrom: '',
+        dateTo: '',
+        status: '',
+        amountMin: '',
+        amountMax: ''
+    });
 
     useEffect(() => {
         fetchSummaries();
@@ -33,11 +40,35 @@ const PayrollList = () => {
     };
 
     // Calculate totals
+    // Apply filters
+    const filteredSummaries = summaries?.filter(summary => {
+        // Date filter
+        if (filters.dateFrom && summary.month < filters.dateFrom + '-01') return false;
+        if (filters.dateTo && summary.month > filters.dateTo + '-31') return false;
+
+        // Status filter - check dominant status
+        if (filters.status) {
+            const total = (summary.pending || 0) + (summary.approved || 0) + (summary.paid || 0);
+            const dominantStatus =
+                (summary.paid || 0) > total / 2 ? 'paid' :
+                    (summary.approved || 0) > total / 2 ? 'approved' :
+                        'pending';
+            if (dominantStatus !== filters.status) return false;
+        }
+
+        // Amount filter
+        const amount = summary.totalNet || summary.totalAmount || 0;
+        if (filters.amountMin && amount < Number(filters.amountMin)) return false;
+        if (filters.amountMax && amount > Number(filters.amountMax)) return false;
+
+        return true;
+    }) || [];
+
     const totals = {
-        totalCycles: summaries?.length || 0,
-        pendingApprovals: summaries?.reduce((sum, item) => sum + (item.pending || 0), 0) || 0,
-        completedPayments: summaries?.reduce((sum, item) => sum + (item.paid || 0), 0) || 0,
-        totalAmount: summaries?.reduce((sum, item) => sum + (item.totalNet || item.totalAmount || 0), 0) || 0,
+        totalCycles: filteredSummaries.length,
+        pendingApprovals: filteredSummaries.reduce((sum, item) => sum + (item.pending || 0), 0),
+        completedPayments: filteredSummaries.reduce((sum, item) => sum + (item.paid || 0), 0),
+        totalAmount: filteredSummaries.reduce((sum, item) => sum + (item.totalNet || item.totalAmount || 0), 0),
     };
 
     const handleProcessPayroll = async () => {
@@ -173,6 +204,74 @@ const PayrollList = () => {
                 </Card>
             </div>
 
+            {/* Filters */}
+            <Card className="border mb-6">
+                <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">From Month</label>
+                            <input
+                                type="month"
+                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                value={filters.dateFrom}
+                                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">To Month</label>
+                            <input
+                                type="month"
+                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                value={filters.dateTo}
+                                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
+                            <select
+                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                value={filters.status}
+                                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                            >
+                                <option value="">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="paid">Paid</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">Min Amount</label>
+                            <input
+                                type="number"
+                                placeholder="₹ 0"
+                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                value={filters.amountMin}
+                                onChange={(e) => setFilters({ ...filters, amountMin: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">Max Amount</label>
+                            <input
+                                type="number"
+                                placeholder="₹ 10,00,000"
+                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                value={filters.amountMax}
+                                onChange={(e) => setFilters({ ...filters, amountMax: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex items-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setFilters({ dateFrom: '', dateTo: '', status: '', amountMin: '', amountMax: '' })}
+                                className="w-full gap-2"
+                            >
+                                Reset
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Payroll Cycles */}
             <Card className="border">
                 <CardHeader>
@@ -181,7 +280,7 @@ const PayrollList = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {summaries?.map((payroll) => (
+                        {filteredSummaries?.map((payroll) => (
                             <Link key={payroll._id} to={`/admin/payroll/${payroll._id}`}>
                                 <div className="group flex cursor-pointer items-center justify-between rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:bg-accent/50">
                                     <div className="flex flex-1 items-center gap-6">

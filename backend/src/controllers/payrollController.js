@@ -264,12 +264,14 @@ export const markAsPaid = asyncHandler(async (req, res) => {
     const originalStatus = payroll.status;
 
     try {
-        // Step 1: Generate PDF FIRST
+        // Step 1: Generate PDF
         const pdfBuffer = await generatePayslipPDF(payroll, payroll.employeeId);
         const filename = `${payroll.employeeId.employeeId}-${payroll.month}`;
+
+        // Step 2: Upload to Cloudinary
         const payslipUrl = await uploadPDFToCloudinary(pdfBuffer, filename);
 
-        // Step 2: Mark as paid ONLY after PDF is ready
+        // Step 3: Mark as paid
         const transactionId = `TXN-${Date.now()}-${payroll.employeeId.employeeId}`;
         payroll.markAsPaid(transactionId);
         payroll.payslipUrl = payslipUrl;
@@ -277,7 +279,7 @@ export const markAsPaid = asyncHandler(async (req, res) => {
         payroll.payslipGeneratedAt = new Date();
         await payroll.save();
 
-        // Step 3: Send email (non-critical)
+        // Step 4: Send email
         const emailResult = await sendPayslipEmail(
             payroll.employeeId.personalInfo.email,
             `${payroll.employeeId.personalInfo.firstName} ${payroll.employeeId.personalInfo.lastName}`,

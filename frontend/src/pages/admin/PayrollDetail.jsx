@@ -7,6 +7,7 @@ import LottieEmptyState from '@/components/common/LottieEmptyState';
 import PageContainer from '@/components/layout/PageContainer';
 import PayrollRow from '@/components/domain/PayrollRow';
 import SalaryBreakdown from '@/components/domain/SalaryBreakdown';
+import PaymentProgressModal from '@/components/domain/PaymentProgressModal';
 import { usePayrollByMonth } from '@/hooks/usePayroll';
 import { approvePayroll, markAsPaid, addAdjustment } from '@/api/payrollApi';
 import { resendPayslipEmail } from '@/api/payslipApi';
@@ -25,6 +26,14 @@ const PayrollDetail = () => {
         amount: 0,
         description: '',
     });
+    const [paymentProgress, setPaymentProgress] = useState({
+        isOpen: false,
+        currentStep: 0,
+        status: 'idle', // idle | processing | success | error
+        error: null,
+        transactionId: null,
+        payroll: null
+    });
 
     const { approveAll, payAll, loading: bulkLoading } = useProcessPayroll();
 
@@ -38,11 +47,88 @@ const PayrollDetail = () => {
     };
 
     const handleBulkPay = async () => {
+        if (!summary?.statusBreakdown?.approved || summary.statusBreakdown.approved === 0) {
+            message.error('No approved payrolls to pay');
+            return;
+        }
+
+        // Show simplified animation for bulk
+        setPaymentProgress({
+            isOpen: true,
+            currentStep: 1,
+            status: 'processing',
+            error: null,
+            transactionId: null,
+            payroll: {
+                netSalary: summary.totalNet,
+                earnings: { gross: summary.totalGross },
+                deductions: { total: summary.totalDeductions }
+            }
+        });
+
+        // Simulate bulk processing with faster steps
+        const steps = [
+            { delay: 400 },  // Calculate
+            { delay: 300 },  // Deductions
+            { delay: 600 },  // PDF generation for all
+            { delay: 500 },  // Upload all
+            { delay: 800 },  // Initiate bulk NEFT
+            { delay: 1000 }, // Bank batch processing
+            { delay: 600 },  // Confirmation
+            { delay: 400 }   // Email all
+        ];
+
         try {
+            // Progress through steps
+            for (let i = 0; i < steps.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, steps[i].delay));
+                if (i < steps.length - 1) {
+                    setPaymentProgress(prev => ({ ...prev, currentStep: i + 2 }));
+                }
+            }
+
+            // Actual API call
             await payAll(month);
-            refetch();
+
+            // Success!
+            setPaymentProgress(prev => ({
+                ...prev,
+                currentStep: 9,
+                status: 'success',
+                transactionId: `BULK-TXN-${Date.now()}`
+            }));
+
+            // Close modal after 2 seconds
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+                refetch();
+            }, 2000);
+
         } catch (error) {
             console.error('Bulk pay failed:', error);
+            setPaymentProgress(prev => ({
+                ...prev,
+                status: 'error',
+                error: 'Bulk payment processing failed'
+            }));
+
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+            }, 3000);
         }
     };
 
@@ -68,12 +154,82 @@ const PayrollDetail = () => {
 
         if (!confirmed) return;
 
+        // Open progress modal
+        setPaymentProgress({
+            isOpen: true,
+            currentStep: 1, // Start at step 1 to show first animation
+            status: 'processing',
+            error: null,
+            transactionId: null,
+            payroll: payroll
+        });
+
+        // Simulate step progression with banking
+        const steps = [
+            { delay: 600 },  // Step 1: Calculate salary
+            { delay: 500 },  // Step 2: Apply deductions  
+            { delay: 1000 }, // Step 3: Generate PDF
+            { delay: 900 },  // Step 4: Upload
+            { delay: 1200 }, // Step 5: Initiate NEFT transfer
+            { delay: 1500 }, // Step 6: Bank processing
+            { delay: 800 },  // Step 7: Payment confirmed
+            { delay: 600 }   // Step 8: Send email
+        ];
+
+        let currentStepIndex = 0;
+
         try {
-            await markAsPaid(payroll._id);
-            message.success('Successfully marked as paid');
-            refetch();
+            // Progress through steps
+            for (let i = 0; i < steps.length; i++) {
+                currentStepIndex = i + 1;
+                setPaymentProgress(prev => ({ ...prev, currentStep: currentStepIndex }));
+                await new Promise(resolve => setTimeout(resolve, steps[i].delay));
+            }
+
+            // Actual API call (backend has its own delays)
+            const response = await markAsPaid(payroll._id);
+
+            // Success!
+            setPaymentProgress(prev => ({
+                ...prev,
+                currentStep: 9, // Changed from 6 to 9 (8 steps + success)
+                status: 'success',
+                transactionId: response.data.transactionId
+            }));
+
+            message.success('Payment processed successfully');
+
+            // Close modal after 3 seconds
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+                refetch();
+            }, 3000);
+
         } catch (error) {
-            message.error('Failed to mark as paid');
+            setPaymentProgress(prev => ({
+                ...prev,
+                status: 'error',
+                error: error.response?.data?.message || 'Payment processing failed'
+            }));
+
+            // Close modal after 4 seconds on error
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+            }, 4000);
         }
     };
 
@@ -332,6 +488,22 @@ const PayrollDetail = () => {
                     </Card>
                 </div>
             )}
+
+            {/* Payment Progress Modal */}
+            <PaymentProgressModal
+                isOpen={paymentProgress.isOpen}
+                employee={{
+                    name: `${paymentProgress.payroll?.employeeId?.personalInfo?.firstName || ''} ${paymentProgress.payroll?.employeeId?.personalInfo?.lastName || ''}`,
+                    email: paymentProgress.payroll?.employeeId?.personalInfo?.email
+                }}
+                payroll={paymentProgress.payroll}
+                currentStep={paymentProgress.currentStep}
+                status={paymentProgress.status}
+                error={paymentProgress.error}
+                transactionId={paymentProgress.transactionId}
+                isBulk={!paymentProgress.payroll?.employeeId}
+                employeeCount={summary?.totalEmployees || 0}
+            />
         </PageContainer>
     );
 };

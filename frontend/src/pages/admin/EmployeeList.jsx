@@ -13,7 +13,15 @@ import axios from '@/api/axios';
 
 const EmployeeList = () => {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ search: '', department: '', status: '' });
+  const [filters, setFilters] = useState({
+    search: '',
+    department: '',
+    status: '',
+    salaryMin: '',
+    salaryMax: '',
+    joinDateFrom: '',
+    joinDateTo: ''
+  });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const { employees, loading, refetch } = useEmployees({ ...filters, page: pagination.current, limit: pagination.pageSize });
 
@@ -82,14 +90,14 @@ const EmployeeList = () => {
       {/* Filters */}
       <Card className="border mb-6">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-7">
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search by name, ID, or email..."
+                  placeholder="Search..."
                   className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   value={filters.search}
                   onChange={(e) => setFilters({ ...filters, search: e.target.value })}
@@ -103,7 +111,7 @@ const EmployeeList = () => {
                 value={filters.department}
                 onChange={(e) => setFilters({ ...filters, department: e.target.value })}
               >
-                <option value="">All Departments</option>
+                <option value="">All</option>
                 {DEPARTMENTS.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
@@ -116,21 +124,49 @@ const EmployeeList = () => {
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
-                <option value="">All Status</option>
+                <option value="">All</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
                 <option value="Terminated">Terminated</option>
                 <option value="Resigned">Resigned</option>
               </select>
             </div>
-            <div className="flex items-end">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Min Salary</label>
+              <input
+                type="number"
+                placeholder="₹ 0"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filters.salaryMin}
+                onChange={(e) => setFilters({ ...filters, salaryMin: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Max Salary</label>
+              <input
+                type="number"
+                placeholder="₹ 200,000"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filters.salaryMax}
+                onChange={(e) => setFilters({ ...filters, salaryMax: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Join Date</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filters.joinDateFrom}
+                onChange={(e) => setFilters({ ...filters, joinDateFrom: e.target.value })}
+              />
+            </div>
+            <div className="flex items-end gap-2">
               <Button
                 variant="outline"
-                onClick={refetch}
-                className="w-full gap-2"
+                onClick={() => setFilters({ search: '', department: '', status: '', salaryMin: '', salaryMax: '', joinDateFrom: '', joinDateTo: '' })}
+                className="flex-1 gap-2"
               >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
+                Reset
               </Button>
             </div>
           </div>
