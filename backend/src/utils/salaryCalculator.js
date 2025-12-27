@@ -123,6 +123,16 @@ export const calculateLOPFromAttendance = async (employeeId, month, year) => {
     date: { $gte: startDate, $lte: endDate }
   });
 
+  // If no attendance records exist, assume 0 LOP (pay full month)
+  // This handles cases where:
+  // 1. Month is in the future
+  // 2. Attendance tracking hasn't started
+  // 3. No records have been entered yet
+  if (attendanceRecords.length === 0) {
+    console.log(`No attendance records for employee ${employeeId} in ${year}-${month}, returning 0 LOP days`);
+    return 0;
+  }
+
   // Count working days: Present + Half-Day (0.5) + Leave
   let workingDays = 0;
   attendanceRecords.forEach(record => {
@@ -144,6 +154,16 @@ export const calculateLOPFromAttendance = async (employeeId, month, year) => {
 
   // LOP days = Expected working days - Actual working days
   const lopDays = Math.max(0, expectedWorkingDays - workingDays);
+
+  console.log(`LOP Calculation for employee ${employeeId}:`, {
+    month: `${year}-${month}`,
+    totalDays,
+    weekends,
+    holidays,
+    expectedWorkingDays,
+    workingDays,
+    lopDays
+  });
 
   return roundToTwo(lopDays);
 };

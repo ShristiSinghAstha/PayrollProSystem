@@ -58,7 +58,7 @@ const Login = () => {
         </div>
 
         {/* Login Card */}
-        <Card className="border-2 shadow-xl bg-white">
+        <Card className="border-2 shadow-xl bg-card">
           <CardContent className="pt-6 pb-8 px-8">
             <form onSubmit={handleLogin} className="space-y-5">
               {/* Error Message */}
@@ -83,7 +83,7 @@ const Login = () => {
                   <input
                     type="email"
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all hover:border-slate-300"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all hover:border-ring"
                     value={credentials.email}
                     onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                     disabled={loading}
@@ -106,7 +106,7 @@ const Login = () => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-12 py-3 border-2 border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all hover:border-slate-300"
+                    className="w-full pl-10 pr-12 py-3 border-2 border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all hover:border-ring"
                     value={credentials.password}
                     onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                     disabled={loading}

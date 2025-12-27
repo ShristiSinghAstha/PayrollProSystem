@@ -120,12 +120,12 @@ const PerformanceReviews = () => {
 
     const getStatusBadge = (status) => {
         const badges = {
-            'Draft': 'bg-gray-100 text-gray-700',
+            'Draft': 'bg-muted text-muted-foreground',
             'Under-Review': 'bg-yellow-100 text-yellow-700',
             'Completed': 'bg-green-100 text-green-700',
             'Acknowledged': 'bg-blue-100 text-blue-700'
         };
-        return badges[status] || 'bg-gray-100 text-gray-700';
+        return badges[status] || 'bg-muted text-muted-foreground';
     };
 
     return (
@@ -153,7 +153,7 @@ const PerformanceReviews = () => {
             {/* Create Review Form Modal */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-                    <Card className="w-full max-w-3xl bg-white my-8">
+                    <Card className="w-full max-w-3xl bg-card my-8">
                         <CardHeader className="border-b">
                             <CardTitle>Create Performance Review</CardTitle>
                         </CardHeader>

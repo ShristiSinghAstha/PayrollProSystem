@@ -39,12 +39,12 @@ const MyReviews = () => {
 
     const getStatusBadge = (status) => {
         const badges = {
-            'Draft': 'bg-gray-100 text-gray-700',
+            'Draft': 'bg-muted text-muted-foreground',
             'Under-Review': 'bg-yellow-100 text-yellow-700',
             'Completed': 'bg-green-100 text-green-700',
             'Acknowledged': 'bg-blue-100 text-blue-700'
         };
-        return badges[status] || 'bg-gray-100 text-gray-700';
+        return badges[status] || 'bg-muted text-muted-foreground';
     };
 
     const renderStars = (score) => {
@@ -178,8 +178,8 @@ const MyReviews = () => {
                 {reviews.length === 0 && !loading && (
                     <Card className="border-dashed">
                         <CardContent className="p-12 text-center">
-                            <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                            <p className="text-gray-600">No performance reviews yet</p>
+                            <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-muted-foreground">No performance reviews yet</p>
                             <p className="text-sm text-muted-foreground mt-2">Your reviews will appear here once completed by your manager</p>
                         </CardContent>
                     </Card>

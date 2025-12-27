@@ -125,7 +125,7 @@ const LeaveApprovals = () => {
             'Approved': 'inline-flex items-center rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700',
             'Rejected': 'inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700'
         };
-        return badges[status] || 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700';
+        return badges[status] || 'inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground';
     };
 
     const getLeaveTypeBadge = (type) => {
@@ -265,7 +265,7 @@ const LeaveApprovals = () => {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="bg-card divide-y divide-border">
                                 {leaves.map((leave) => (
                                     <tr key={leave._id} className="hover:bg-gray-50">
                                         <td className="px-4 py-4">
@@ -353,7 +353,7 @@ const LeaveApprovals = () => {
             {/* Approve Modal */}
             {approveModal && selectedLeave && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setApproveModal(false)}>
-                    <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-md bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>Approve Leave</CardTitle>

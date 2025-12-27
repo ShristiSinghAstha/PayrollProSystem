@@ -130,8 +130,8 @@ const PayrollDetail = () => {
         <PageContainer>
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Payroll: {formatMonth(month)}</h1>
-                    <p className="text-gray-600">Review payroll before approval and payment</p>
+                    <h1 className="text-2xl font-bold text-foreground">Payroll: {formatMonth(month)}</h1>
+                    <p className="text-muted-foreground">Review payroll before approval and payment</p>
                 </div>
                 <div className="flex gap-3">
                     {summary?.statusBreakdown?.pending > 0 && (
@@ -196,12 +196,12 @@ const PayrollDetail = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gross</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deductions</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid At</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Gross</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Deductions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Net</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Paid At</th>
                                     <th className="px-4 py-3"></th>
                                 </tr>
                             </thead>
@@ -230,7 +230,7 @@ const PayrollDetail = () => {
             {/* Salary Breakdown Modal */}
             {selected && !showAdjustment && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelected(null)}>
-                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>
@@ -259,7 +259,7 @@ const PayrollDetail = () => {
                     setShowAdjustment(false);
                     setAdjustmentForm({ type: 'Bonus', amount: 0, description: '' });
                 }}>
-                    <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-md bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>Add Adjustment</CardTitle>

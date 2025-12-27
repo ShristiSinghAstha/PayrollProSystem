@@ -91,12 +91,12 @@ const TaxDeclarations = () => {
 
     const getStatusBadge = (status) => {
         const badges = {
-            'Draft': 'bg-gray-100 text-gray-700 border-gray-300',
+            'Draft': 'bg-muted text-muted-foreground border-border',
             'Submitted': 'bg-yellow-100 text-yellow-700 border-yellow-300',
             'Verified': 'bg-green-100 text-green-700 border-green-300',
             'Rejected': 'bg-red-100 text-red-700 border-red-300'
         };
-        return badges[status] || 'bg-gray-100 text-gray-700';
+        return badges[status] || 'bg-muted text-muted-foreground';
     };
 
     const total80C = Object.values(formData.section80C).reduce((sum, val) => sum + val, 0);
@@ -338,8 +338,8 @@ const TaxDeclarations = () => {
                 {declarations.length === 0 && !loading && (
                     <Card className="border-dashed">
                         <CardContent className="p-12 text-center">
-                            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                            <p className="text-gray-600">No tax declarations yet</p>
+                            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-muted-foreground">No tax declarations yet</p>
                             <Button className="mt-4" onClick={() => setShowForm(true)}>
                                 Create Your First Declaration
                             </Button>

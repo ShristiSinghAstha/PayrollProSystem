@@ -195,19 +195,19 @@ const MyAttendance = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check In</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check Out</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Check In</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Check Out</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Hours</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="bg-card divide-y divide-border">
                                 {attendance.map((record) => (
                                     <tr key={record._id}>
                                         <td className="px-4 py-4">
                                             <div className="flex items-center gap-2">
-                                                <Calendar className="h-4 w-4 text-gray-400" />
+                                                <Calendar className="h-4 w-4 text-muted-foreground" />
                                                 <span className="text-sm">{dayjs(record.date).format('DD MMM YYYY')}</span>
                                             </div>
                                         </td>
@@ -217,10 +217,10 @@ const MyAttendance = () => {
                                             </span>
                                             {record.isLate && <span className="ml-2 text-xs text-orange-600">Late</span>}
                                         </td>
-                                        <td className="px-4 py-4 text-sm text-gray-600">
+                                        <td className="px-4 py-4 text-sm text-foreground">
                                             {record.checkIn?.time ? dayjs(record.checkIn.time).format('h:mm A') : '-'}
                                         </td>
-                                        <td className="px-4 py-4 text-sm text-gray-600">
+                                        <td className="px-4 py-4 text-sm text-foreground">
                                             {record.checkOut?.time ? dayjs(record.checkOut.time).format('h:mm A') : '-'}
                                         </td>
                                         <td className="px-4 py-4 text-sm text-gray-600">
@@ -233,8 +233,8 @@ const MyAttendance = () => {
 
                         {attendance.length === 0 && !loading && (
                             <div className="text-center py-12">
-                                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600">No attendance records for this month</p>
+                                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                <p className="text-muted-foreground">No attendance records for this month</p>
                             </div>
                         )}
                     </div>

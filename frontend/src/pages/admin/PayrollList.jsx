@@ -271,7 +271,7 @@ const PayrollList = () => {
             {/* Process Payroll Modal */}
             {showProcessModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowProcessModal(false)}>
-                    <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-md bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>Process New Payroll</CardTitle>

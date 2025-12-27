@@ -187,7 +187,7 @@ const Profile = () => {
               <p className="mt-1">
                 <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${employment.status === 'Active'
                   ? 'bg-green-50 text-green-700 border-green-200'
-                  : 'bg-gray-50 text-gray-700 border-gray-200'
+                  : 'bg-muted text-muted-foreground border-border'
                   }`}>
                   {employment.status}
                 </span>
@@ -228,7 +228,7 @@ const Profile = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={() => setShowPasswordModal(false)}
         >
-          <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+          <Card className="w-full max-w-md bg-card border-2" onClick={(e) => e.stopPropagation()}>
             <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <CardTitle>Change Password</CardTitle>
