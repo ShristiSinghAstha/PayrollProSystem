@@ -60,7 +60,7 @@ const TaxDeclarations = () => {
             ...prev,
             [section]: {
                 ...prev[section],
-                [field]: parseFloat(value) || 0
+                [field]: value === '' ? 0 : parseFloat(value)
             }
         }));
     };
@@ -204,7 +204,7 @@ const TaxDeclarations = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium">Landlord PAN (if rent > ₹1L)</label>
+                                        <label className="text-sm font-medium">Landlord PAN (if rent &gt; ₹1L)</label>
                                         <input
                                             type="text"
                                             className="w-full mt-1 px-3 py-2 border rounded-md"
@@ -240,7 +240,7 @@ const TaxDeclarations = () => {
                                         type="number"
                                         className="w-full mt-1 px-3 py-2 border rounded-md"
                                         value={formData.nps}
-                                        onChange={(e) => setFormData({ ...formData, nps: parseFloat(e.target.value) || 0 })}
+                                        onChange={(e) => setFormData({ ...formData, nps: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                                         max={50000}
                                     />
                                 </div>
