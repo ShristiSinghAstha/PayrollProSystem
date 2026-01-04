@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus, Users, Clock, CheckCircle2, DollarSign, ArrowRight, TrendingUp, X } from "lucide-react";
+import { Calendar, Plus, Users, Clock, CheckCircle2, DollarSign, ArrowRight, TrendingUp, X, Search, Filter } from "lucide-react";
 import { Link, useNavigate } from 'react-router-dom';
 import PageContainer from '@/components/layout/PageContainer';
 import { getMonthlyPayrollSummary, processMonthlyPayroll } from '@/api/payrollApi';
@@ -22,6 +22,11 @@ const PayrollList = () => {
         amountMin: '',
         amountMax: ''
     });
+
+    // Filter states
+    const [selectedYear, setSelectedYear] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchSummaries();
@@ -110,6 +115,37 @@ const PayrollList = () => {
         }
         return options;
     };
+
+    // Get unique years from summaries (with safety check)
+    const availableYears = summaries && summaries.length > 0
+        ? [...new Set(summaries.map(s => new Date(s.month).getFullYear()))].sort((a, b) => b - a)
+        : [];
+
+    // Filter summaries (with safety check)
+    const filteredSummaries = (summaries || []).filter(payroll => {
+        const payrollDate = new Date(payroll.month);
+        const payrollYear = payrollDate.getFullYear();
+        const monthName = payrollDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+        // Year filter
+        if (selectedYear !== 'all' && payrollYear !== parseInt(selectedYear)) {
+            return false;
+        }
+
+        // Status filter
+        if (selectedStatus !== 'all') {
+            if (selectedStatus === 'pending' && payroll.pending === 0) return false;
+            if (selectedStatus === 'approved' && payroll.approved === 0) return false;
+            if (selectedStatus === 'paid' && payroll.paid === 0) return false;
+        }
+
+        // Search filter
+        if (searchTerm && !monthName.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+        }
+
+        return true;
+    });
 
     return (
         <PageContainer>
@@ -351,17 +387,38 @@ const PayrollList = () => {
                     </div>
 
                     {/* Empty State */}
-                    {summaries?.length === 0 && !loading && (
+                    {filteredSummaries?.length === 0 && !loading && (
                         <div className="flex flex-col items-center justify-center py-16">
                             <div className="rounded-full bg-muted p-6">
                                 <Calendar className="h-12 w-12 text-muted-foreground" />
                             </div>
-                            <h3 className="mt-4 text-lg font-semibold text-foreground">No payroll records yet</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">Get started by processing your first payroll</p>
-                            <Button className="mt-6 gap-2" onClick={() => setShowProcessModal(true)}>
-                                <Plus className="h-4 w-4" />
-                                Process First Payroll
-                            </Button>
+                            {summaries?.length === 0 ? (
+                                <>
+                                    <h3 className="mt-4 text-lg font-semibold text-foreground">No payroll records yet</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">Get started by processing your first payroll</p>
+                                    <Button className="mt-6 gap-2" onClick={() => setShowProcessModal(true)}>
+                                        <Plus className="h-4 w-4" />
+                                        Process First Payroll
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="mt-4 text-lg font-semibold text-foreground">No matching payroll records</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">Try adjusting your filters to see more results</p>
+                                    <Button
+                                        className="mt-6 gap-2"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setSelectedYear('all');
+                                            setSelectedStatus('all');
+                                            setSearchTerm('');
+                                        }}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Clear Filters
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     )}
                 </CardContent>
