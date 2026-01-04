@@ -6,8 +6,10 @@ import {
     getPayrollByMonth,
     addAdjustment,
     approvePayroll,
+    revokePayroll,
     markAsPaid,
     approveAllForMonth,
+    revokeAllForMonth,
     getPayrollStats,
     bulkPayAndGeneratePayslips,
     getMonthlyPayrollSummary,
@@ -25,6 +27,7 @@ router.get('/stats', getPayrollStats);
 router.get('/salary-by-department', getSalaryByDepartment);
 router.post('/process', payrollValidation.process, processMonthlyPayroll);
 router.post('/bulk-approve/:month', approveAllForMonth);
+router.post('/bulk-revoke/:month', revokeAllForMonth);
 
 router.get('/summary', getMonthlyPayrollSummary);
 router.get('/', getPayrollRecords);
@@ -33,6 +36,7 @@ router.get('/:id', payrollValidation.getById, getPayrollById);
 
 router.put('/:id/adjustment', payrollValidation.adjustment, addAdjustment);
 router.put('/:id/approve', payrollValidation.getById, approvePayroll);
+router.put('/:id/revoke', payrollValidation.getById, revokePayroll);
 router.put('/:id/pay', payrollValidation.getById, markAsPaid);
 router.post('/bulk-pay/:month', bulkPayAndGeneratePayslips);
 

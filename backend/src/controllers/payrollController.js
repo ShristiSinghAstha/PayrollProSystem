@@ -249,6 +249,42 @@ export const approvePayroll = asyncHandler(async (req, res) => {
     });
 });
 
+export const revokePayroll = asyncHandler(async (req, res) => {
+    const payroll = await Payroll.findById(req.params.id);
+
+    if (!payroll) {
+        throw new AppError('Payroll record not found', 404);
+    }
+
+    // Safety check: Can only revoke if Approved
+    if (payroll.status !== 'Approved') {
+        throw new AppError('Only approved payrolls can be revoked. Current status: ' + payroll.status, 400);
+    }
+
+    // Store the previous status for audit
+    const previousStatus = payroll.status;
+
+    // Revert to Pending
+    payroll.status = 'Pending';
+    payroll.approvedBy = undefined;
+    payroll.approvedAt = undefined;
+    await payroll.save();
+
+    // Audit logging
+    await logPayrollApproval(payroll, getPerformedBy(req), {
+        ...getAuditMetadata(req),
+        action: 'REVOKE',
+        previousStatus,
+        newStatus: 'Pending'
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Payroll approval revoked successfully',
+        data: payroll
+    });
+});
+
 export const markAsPaid = asyncHandler(async (req, res) => {
     const payroll = await Payroll.findById(req.params.id)
         .populate('employeeId', 'employeeId personalInfo employment bankDetails');
@@ -359,6 +395,45 @@ export const approveAllForMonth = asyncHandler(async (req, res) => {
         data: {
             month,
             approved: result.modifiedCount
+        }
+    });
+});
+
+export const revokeAllForMonth = asyncHandler(async (req, res) => {
+    const { month } = req.params;
+
+    const result = await Payroll.updateMany(
+        { month, status: 'Approved' },
+        {
+            $set: {
+                status: 'Pending',
+                approvedAt: null,
+                approvedBy: null
+            }
+        }
+    );
+
+    if (result.modifiedCount === 0) {
+        throw new AppError('No approved payroll records found for this month', 404);
+    }
+
+    // Audit logging for bulk revoke
+    await logPayrollApproval(
+        { month, _id: 'bulk-revoke' },
+        getPerformedBy(req),
+        {
+            ...getAuditMetadata(req),
+            action: 'BULK_REVOKE',
+            count: result.modifiedCount
+        }
+    );
+
+    res.status(200).json({
+        success: true,
+        message: `Revoked approval for ${result.modifiedCount} payroll records for ${month}`,
+        data: {
+            month,
+            revoked: result.modifiedCount
         }
     });
 });

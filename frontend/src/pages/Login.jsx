@@ -117,7 +117,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -131,25 +131,22 @@ const Login = () => {
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white mb-4 shadow-lg">
-              <span className="text-2xl font-bold">P</span>
-            </div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">PayrollPro</h1>
-            <p className="text-slate-600">
+            <h1 className="text-4xl font-bold text-foreground mb-2">PayrollPro</h1>
+            <p className="text-muted-foreground">
               {step === 1 ? 'Sign in to your account' : 'Enter verification code'}
             </p>
           </motion.div>
         </div>
 
         {/* Login Card */}
-        <Card className="border-2 shadow-xl bg-card">
-          <CardContent className="pt-6 pb-8 px-8">
+        <Card className="border shadow-lg">
+          <CardContent className="pt-6">
             {/* Error Message */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-5"
+                className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md mb-6"
               >
                 <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
                 <p className="text-sm text-red-700">{error}</p>
@@ -158,18 +155,18 @@ const Login = () => {
 
             {/* STEP 1: Credentials */}
             {step === 1 && (
-              <form onSubmit={handleSendOTP} className="space-y-5">
+              <form onSubmit={handleSendOTP} className="space-y-6">
                 {/* Email Field */}
                 <div>
-                  <label className="text-sm font-semibold text-slate-700 mb-2 block">
+                  <label className="text-sm font-medium text-foreground mb-2 block">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
                       type="email"
                       placeholder="you@example.com"
-                      className="w-full pl-10 pr-4 py-3 border-2 border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all hover:border-ring"
+                      className="w-full pl-10 pr-4 py-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={loading}
@@ -181,19 +178,19 @@ const Login = () => {
                 {/* Password Field */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-slate-700">
+                    <label className="text-sm font-medium text-foreground">
                       Password
                     </label>
-                    <Link to="/forgot-password" className="text-sm text-slate-600 hover:text-slate-900 hover:underline transition-colors">
+                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                       Forgot password?
                     </Link>
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-12 py-3 border-2 border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all hover:border-ring"
+                      className="w-full pl-10 pr-12 py-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={loading}
@@ -201,7 +198,7 @@ const Login = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -215,7 +212,7 @@ const Login = () => {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full py-6 text-base font-semibold shadow-md hover:shadow-lg bg-gradient-to-r from-purple-600 to-indigo-600"
+                  className="w-full py-6 text-base font-medium"
                   disabled={loading}
                 >
                   {loading ? 'Sending OTP...' : 'Continue'}
@@ -229,7 +226,7 @@ const Login = () => {
                 {/* Back Button */}
                 <button
                   onClick={handleBack}
-                  className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
                   disabled={loading}
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -238,12 +235,12 @@ const Login = () => {
 
                 {/* Instructions */}
                 <div className="text-center">
-                  <Clock className="h-12 w-12 mx-auto mb-3 text-purple-600" />
-                  <p className="text-sm text-slate-600 mb-1">
+                  <Clock className="h-12 w-12 mx-auto mb-3 text-primary" />
+                  <p className="text-sm text-muted-foreground mb-1">
                     We've sent a 6-digit code to
                   </p>
-                  <p className="font-semibold text-slate-900 mb-4">{maskedEmail}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="font-semibold text-foreground mb-4">{maskedEmail}</p>
+                  <p className="text-xs text-muted-foreground">
                     Code expires in 5 minutes
                   </p>
                 </div>
@@ -260,14 +257,14 @@ const Login = () => {
                 {/* Resend OTP */}
                 <div className="text-center">
                   {resendCooldown > 0 ? (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted-foreground">
                       Resend code in <span className="font-semibold">{resendCooldown}s</span>
                     </p>
                   ) : (
                     <button
                       onClick={handleResendOTP}
                       disabled={loading}
-                      className="text-sm text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-2 mx-auto transition-colors"
+                      className="text-sm text-primary hover:underline font-medium flex items-center gap-2 mx-auto"
                     >
                       <RefreshCw className="h-4 w-4" />
                       Resend OTP
@@ -276,8 +273,8 @@ const Login = () => {
                 </div>
 
                 {/* Security Note */}
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                  <p className="text-xs text-purple-800 text-center">
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-xs text-blue-800 text-center">
                     🔒 For your security, never share this code with anyone
                   </p>
                 </div>
@@ -287,7 +284,7 @@ const Login = () => {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-sm text-muted-foreground mt-6">
           © 2025 PayrollPro. All rights reserved.
         </p>
       </motion.div>

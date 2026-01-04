@@ -108,6 +108,47 @@ export const confirmPayment = (amount, employeeName = '') => {
     });
 };
 
+/**
+ * Preset: Revoke approval confirmation
+ */
+export const confirmRevoke = (employeeName = '') => {
+    return showConfirmation({
+        title: 'Revoke Approval',
+        text: employeeName
+            ? `Revoke approval for ${employeeName}'s payroll? This will move it back to pending status.`
+            : 'Revoke payroll approval? This will move it back to pending status.',
+        icon: 'warning',
+        confirmButtonText: 'Yes, revoke approval',
+        confirmButtonColor: '#faad14', // Yellow/warning color
+    });
+};
+
+/**
+ * Preset: Bulk payment confirmation
+ */
+export const confirmBulkPayment = (totalAmount, employeeCount) => {
+    return showConfirmation({
+        title: 'Bulk Payment Confirmation',
+        text: `Process payment for ${employeeCount} employee${employeeCount > 1 ? 's' : ''} totaling ${totalAmount}? This action cannot be undone.`,
+        icon: 'warning',
+        confirmButtonText: 'Yes, pay all',
+        confirmButtonColor: '#52c41a',
+    });
+};
+
+/**
+ * Preset: Bulk revoke confirmation
+ */
+export const confirmBulkRevoke = (employeeCount) => {
+    return showConfirmation({
+        title: 'Revoke All Approvals',
+        text: `Revoke approval for ${employeeCount} employee${employeeCount > 1 ? 's' : ''}? This will move them back to pending status.`,
+        icon: 'warning',
+        confirmButtonText: 'Yes, revoke all',
+        confirmButtonColor: '#faad14', // Yellow/warning
+    });
+};
+
 export default {
     showConfirmation,
     showSuccess,
@@ -115,4 +156,7 @@ export default {
     confirmDelete,
     confirmApprove,
     confirmPayment,
+    confirmRevoke,
+    confirmBulkPayment,
+    confirmBulkRevoke,
 };

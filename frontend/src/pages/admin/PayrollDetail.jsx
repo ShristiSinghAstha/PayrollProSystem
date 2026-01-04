@@ -9,12 +9,12 @@ import PayrollRow from '@/components/domain/PayrollRow';
 import SalaryBreakdown from '@/components/domain/SalaryBreakdown';
 import PaymentProgressModal from '@/components/domain/PaymentProgressModal';
 import { usePayrollByMonth } from '@/hooks/usePayroll';
-import { approvePayroll, markAsPaid, addAdjustment } from '@/api/payrollApi';
+import { approvePayroll, markAsPaid, addAdjustment, revokePayroll } from '@/api/payrollApi';
 import { resendPayslipEmail } from '@/api/payslipApi';
 import { useProcessPayroll } from '@/hooks/useProcessPayroll';
 import { formatMonth, formatCurrency } from '@/utils/formatters';
 import { message } from 'antd';
-import { confirmApprove, confirmPayment } from '@/utils/confirmations';
+import { confirmApprove, confirmPayment, confirmRevoke, confirmBulkPayment, confirmBulkRevoke } from '@/utils/confirmations';
 
 const PayrollDetail = () => {
     const { month } = useParams();
@@ -35,7 +35,7 @@ const PayrollDetail = () => {
         payroll: null
     });
 
-    const { approveAll, payAll, loading: bulkLoading } = useProcessPayroll();
+    const { approveAll, revokeAll, payAll, loading: bulkLoading } = useProcessPayroll();
 
     const handleBulkApprove = async () => {
         try {
@@ -46,11 +46,37 @@ const PayrollDetail = () => {
         }
     };
 
+    const handleBulkRevoke = async () => {
+        if (!summary?.statusBreakdown?.approved || summary.statusBreakdown.approved === 0) {
+            message.error('No approved payrolls to revoke');
+            return;
+        }
+
+        const employeeCount = summary.statusBreakdown.approved;
+        const confirmed = await confirmBulkRevoke(employeeCount);
+
+        if (!confirmed) return;
+
+        try {
+            await revokeAll(month);
+            refetch();
+        } catch (error) {
+            console.error('Bulk revoke failed:', error);
+        }
+    };
+
     const handleBulkPay = async () => {
         if (!summary?.statusBreakdown?.approved || summary.statusBreakdown.approved === 0) {
             message.error('No approved payrolls to pay');
             return;
         }
+
+        // Add confirmation dialog
+        const totalAmount = formatCurrency(summary.totalNet);
+        const employeeCount = summary.statusBreakdown.approved;
+        const confirmed = await confirmBulkPayment(totalAmount, employeeCount);
+
+        if (!confirmed) return;
 
         // Show simplified animation for bulk
         setPaymentProgress({
@@ -144,6 +170,21 @@ const PayrollDetail = () => {
             refetch();
         } catch (error) {
             message.error('Failed to approve payroll');
+        }
+    };
+
+    const handleRevoke = async (payroll) => {
+        const employeeName = `${payroll.employeeId?.personalInfo?.firstName || ''} ${payroll.employeeId?.personalInfo?.lastName || ''}`;
+        const confirmed = await confirmRevoke(employeeName);
+
+        if (!confirmed) return;
+
+        try {
+            await revokePayroll(payroll._id);
+            message.success('Payroll approval revoked successfully');
+            refetch();
+        } catch (error) {
+            message.error(error.response?.data?.error?.message || 'Failed to revoke payroll');
         }
     };
 
@@ -301,14 +342,24 @@ const PayrollDetail = () => {
                         </Button>
                     )}
                     {summary?.statusBreakdown?.approved > 0 && (
-                        <Button
-                            size="lg"
-                            onClick={handleBulkPay}
-                            disabled={bulkLoading}
-                            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                        >
-                            {bulkLoading ? 'Processing...' : `Pay All Approved (${summary.statusBreakdown.approved})`}
-                        </Button>
+                        <>
+                            <Button
+                                size="lg"
+                                onClick={handleBulkRevoke}
+                                disabled={bulkLoading}
+                                className="gap-2 bg-yellow-500 hover:bg-yellow-600 text-white"
+                            >
+                                {bulkLoading ? 'Processing...' : `Revoke All Approved (${summary.statusBreakdown.approved})`}
+                            </Button>
+                            <Button
+                                size="lg"
+                                onClick={handleBulkPay}
+                                disabled={bulkLoading}
+                                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                {bulkLoading ? 'Processing...' : `Pay All Approved (${summary.statusBreakdown.approved})`}
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -372,6 +423,7 @@ const PayrollDetail = () => {
                                             setShowAdjustment(true);
                                         }}
                                         onApprove={handleApprove}
+                                        onRevoke={handleRevoke}
                                         onPay={handlePay}
                                         onResendEmail={handleResendEmail}
                                     />
