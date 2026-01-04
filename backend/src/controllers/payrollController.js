@@ -1,7 +1,7 @@
 import Payroll from '../models/Payroll.js';
 import Employee from '../models/Employee.js';
 import { asyncHandler, AppError } from '../middlewares/errorHandler.js';
-import { calculateSalary } from '../utils/salaryCalculator.js';
+import { calculateSalary, calculateLOPFromAttendance } from '../utils/salaryCalculator.js';
 import { logPayrollProcess, logPayrollApproval } from '../utils/auditLogger.js';
 import { generatePayslipPDF, uploadPDFToCloudinary } from '../utils/pdfGenerator.js';
 import { sendPayslipEmail } from '../utils/emailService.js';
@@ -63,9 +63,14 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
 
     for (const employee of employeesToProcess) {
         try {
-            // Get LOP days for this month from Leave model
-            const Leave = (await import('../models/Leave.js')).default;
-            const lopDays = await Leave.getLOPDaysForMonth(employee._id, year, month);
+            // Calculate LOP days from attendance records
+            let lopDays = 0;
+            try {
+                lopDays = await calculateLOPFromAttendance(employee._id, month, year);
+            } catch (attendanceError) {
+                console.warn(`Could not calculate LOP from attendance for employee ${employee.employeeId}, using 0:`, attendanceError.message);
+                lopDays = 0;
+            }
 
             // Calculate salary with LOP deduction
             const salaryBreakdown = calculateSalary(employee.salaryStructure, { lopDays });
@@ -82,7 +87,7 @@ export const processMonthlyPayroll = asyncHandler(async (req, res) => {
                 adjustments: lopDays > 0 ? [{
                     type: 'LOP',
                     amount: salaryBreakdown.deductions.lop,
-                    reason: `${lopDays} day(s) Leave without Pay`,
+                    reason: `${lopDays} day(s) Loss of Pay (based on attendance)`,
                     appliedBy: 'SYSTEM'
                 }] : []
             });
@@ -244,6 +249,42 @@ export const approvePayroll = asyncHandler(async (req, res) => {
     });
 });
 
+export const revokePayroll = asyncHandler(async (req, res) => {
+    const payroll = await Payroll.findById(req.params.id);
+
+    if (!payroll) {
+        throw new AppError('Payroll record not found', 404);
+    }
+
+    // Safety check: Can only revoke if Approved
+    if (payroll.status !== 'Approved') {
+        throw new AppError('Only approved payrolls can be revoked. Current status: ' + payroll.status, 400);
+    }
+
+    // Store the previous status for audit
+    const previousStatus = payroll.status;
+
+    // Revert to Pending
+    payroll.status = 'Pending';
+    payroll.approvedBy = undefined;
+    payroll.approvedAt = undefined;
+    await payroll.save();
+
+    // Audit logging
+    await logPayrollApproval(payroll, getPerformedBy(req), {
+        ...getAuditMetadata(req),
+        action: 'REVOKE',
+        previousStatus,
+        newStatus: 'Pending'
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Payroll approval revoked successfully',
+        data: payroll
+    });
+});
+
 export const markAsPaid = asyncHandler(async (req, res) => {
     const payroll = await Payroll.findById(req.params.id)
         .populate('employeeId', 'employeeId personalInfo employment bankDetails');
@@ -259,12 +300,14 @@ export const markAsPaid = asyncHandler(async (req, res) => {
     const originalStatus = payroll.status;
 
     try {
-        // Step 1: Generate PDF FIRST
+        // Step 1: Generate PDF
         const pdfBuffer = await generatePayslipPDF(payroll, payroll.employeeId);
         const filename = `${payroll.employeeId.employeeId}-${payroll.month}`;
+
+        // Step 2: Upload to Cloudinary
         const payslipUrl = await uploadPDFToCloudinary(pdfBuffer, filename);
 
-        // Step 2: Mark as paid ONLY after PDF is ready
+        // Step 3: Mark as paid
         const transactionId = `TXN-${Date.now()}-${payroll.employeeId.employeeId}`;
         payroll.markAsPaid(transactionId);
         payroll.payslipUrl = payslipUrl;
@@ -272,7 +315,7 @@ export const markAsPaid = asyncHandler(async (req, res) => {
         payroll.payslipGeneratedAt = new Date();
         await payroll.save();
 
-        // Step 3: Send email (non-critical)
+        // Step 4: Send email
         const emailResult = await sendPayslipEmail(
             payroll.employeeId.personalInfo.email,
             `${payroll.employeeId.personalInfo.firstName} ${payroll.employeeId.personalInfo.lastName}`,
@@ -352,6 +395,45 @@ export const approveAllForMonth = asyncHandler(async (req, res) => {
         data: {
             month,
             approved: result.modifiedCount
+        }
+    });
+});
+
+export const revokeAllForMonth = asyncHandler(async (req, res) => {
+    const { month } = req.params;
+
+    const result = await Payroll.updateMany(
+        { month, status: 'Approved' },
+        {
+            $set: {
+                status: 'Pending',
+                approvedAt: null,
+                approvedBy: null
+            }
+        }
+    );
+
+    if (result.modifiedCount === 0) {
+        throw new AppError('No approved payroll records found for this month', 404);
+    }
+
+    // Audit logging for bulk revoke
+    await logPayrollApproval(
+        { month, _id: 'bulk-revoke' },
+        getPerformedBy(req),
+        {
+            ...getAuditMetadata(req),
+            action: 'BULK_REVOKE',
+            count: result.modifiedCount
+        }
+    );
+
+    res.status(200).json({
+        success: true,
+        message: `Revoked approval for ${result.modifiedCount} payroll records for ${month}`,
+        data: {
+            month,
+            revoked: result.modifiedCount
         }
     });
 });
@@ -561,5 +643,45 @@ export const getMonthlyPayrollSummary = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         data: summaries
+    });
+});
+
+// Get average salary by department (Admin)
+export const getSalaryByDepartment = asyncHandler(async (req, res) => {
+    const { month, year = new Date().getFullYear() } = req.query;
+
+    const matchStage = { status: 'Paid' };
+    if (month) {
+        const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+        matchStage.month = monthStr;
+    }
+
+    const stats = await Payroll.aggregate([
+        { $match: matchStage },
+        {
+            $lookup: {
+                from: 'employees',
+                localField: 'employeeId',
+                foreignField: '_id',
+                as: 'employee'
+            }
+        },
+        { $unwind: '$employee' },
+        {
+            $group: {
+                _id: '$employee.employment.department',
+                avgSalary: { $avg: '$netSalary' },
+                totalEmployees: { $sum: 1 },
+                totalPayout: { $sum: '$netSalary' },
+                minSalary: { $min: '$netSalary' },
+                maxSalary: { $max: '$netSalary' }
+            }
+        },
+        { $sort: { avgSalary: -1 } }
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: stats
     });
 });

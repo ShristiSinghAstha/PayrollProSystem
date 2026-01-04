@@ -4,6 +4,8 @@ import { Users, UserCheck, Clock, DollarSign, Plus, TrendingUp, PieChart, Calend
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,6 +22,8 @@ import CountUp from 'react-countup';
 import PageContainer from '@/components/layout/PageContainer';
 import { useEmployeeStats } from '@/hooks/useEmployees';
 import { usePayrollStats } from '@/hooks/usePayroll';
+import { useLeaveStats } from '@/hooks/useLeaveStats';
+import { useEmployeeGrowth } from '@/hooks/useEmployeeGrowth';
 
 // Animation variants
 const containerVariants = {
@@ -47,6 +51,8 @@ const cardVariants = {
 const AdminDashboard = () => {
   const { stats: employeeStats } = useEmployeeStats();
   const { stats: payrollStats } = usePayrollStats({ month: undefined });
+  const { stats: leaveStats } = useLeaveStats();
+  const { data: employeeGrowth } = useEmployeeGrowth(6);
 
   // Monthly trend data
   const monthlyPayrollData = payrollStats?.byMonth?.slice(0, 6).reverse().map(month => ({
@@ -274,7 +280,7 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-2xl font-semibold text-foreground">
-                        <CountUp end={0} duration={2} />
+                        <CountUp end={leaveStats?.byStatus?.Pending?.count || 0} duration={2} />
                       </span>
                       <Button variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground">
                         Review
@@ -369,6 +375,54 @@ const AdminDashboard = () => {
         </Card>
       </motion.div>
 
+      {/* Employee Growth Chart - Full Width */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+        className="mb-8"
+      >
+        <Card className="border">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Employee Growth Trend</CardTitle>
+            <CardDescription>New employee hires over the last 6 months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={employeeGrowth}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: "#64748b", fontSize: 12 }}
+                  axisLine={{ stroke: "#e2e8f0" }}
+                />
+                <YAxis
+                  tick={{ fill: "#64748b", fontSize: 12 }}
+                  axisLine={{ stroke: "#e2e8f0" }}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                  }}
+                  labelFormatter={(label) => `Month: ${label}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={{ fill: "#3b82f6", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Bottom Section */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Recent Activities */}
@@ -441,7 +495,7 @@ const AdminDashboard = () => {
           </Card>
         </motion.div>
       </div>
-    </PageContainer>
+    </PageContainer >
   );
 };
 

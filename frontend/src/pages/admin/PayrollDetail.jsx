@@ -7,13 +7,14 @@ import LottieEmptyState from '@/components/common/LottieEmptyState';
 import PageContainer from '@/components/layout/PageContainer';
 import PayrollRow from '@/components/domain/PayrollRow';
 import SalaryBreakdown from '@/components/domain/SalaryBreakdown';
+import PaymentProgressModal from '@/components/domain/PaymentProgressModal';
 import { usePayrollByMonth } from '@/hooks/usePayroll';
-import { approvePayroll, markAsPaid, addAdjustment } from '@/api/payrollApi';
+import { approvePayroll, markAsPaid, addAdjustment, revokePayroll } from '@/api/payrollApi';
 import { resendPayslipEmail } from '@/api/payslipApi';
 import { useProcessPayroll } from '@/hooks/useProcessPayroll';
 import { formatMonth, formatCurrency } from '@/utils/formatters';
 import { message } from 'antd';
-import { confirmApprove, confirmPayment } from '@/utils/confirmations';
+import { confirmApprove, confirmPayment, confirmRevoke, confirmBulkPayment, confirmBulkRevoke } from '@/utils/confirmations';
 
 const PayrollDetail = () => {
     const { month } = useParams();
@@ -25,8 +26,16 @@ const PayrollDetail = () => {
         amount: 0,
         description: '',
     });
+    const [paymentProgress, setPaymentProgress] = useState({
+        isOpen: false,
+        currentStep: 0,
+        status: 'idle', // idle | processing | success | error
+        error: null,
+        transactionId: null,
+        payroll: null
+    });
 
-    const { approveAll, payAll, loading: bulkLoading } = useProcessPayroll();
+    const { approveAll, revokeAll, payAll, loading: bulkLoading } = useProcessPayroll();
 
     const handleBulkApprove = async () => {
         try {
@@ -37,12 +46,115 @@ const PayrollDetail = () => {
         }
     };
 
-    const handleBulkPay = async () => {
+    const handleBulkRevoke = async () => {
+        if (!summary?.statusBreakdown?.approved || summary.statusBreakdown.approved === 0) {
+            message.error('No approved payrolls to revoke');
+            return;
+        }
+
+        const employeeCount = summary.statusBreakdown.approved;
+        const confirmed = await confirmBulkRevoke(employeeCount);
+
+        if (!confirmed) return;
+
         try {
-            await payAll(month);
+            await revokeAll(month);
             refetch();
         } catch (error) {
+            console.error('Bulk revoke failed:', error);
+        }
+    };
+
+    const handleBulkPay = async () => {
+        if (!summary?.statusBreakdown?.approved || summary.statusBreakdown.approved === 0) {
+            message.error('No approved payrolls to pay');
+            return;
+        }
+
+        // Add confirmation dialog
+        const totalAmount = formatCurrency(summary.totalNet);
+        const employeeCount = summary.statusBreakdown.approved;
+        const confirmed = await confirmBulkPayment(totalAmount, employeeCount);
+
+        if (!confirmed) return;
+
+        // Show simplified animation for bulk
+        setPaymentProgress({
+            isOpen: true,
+            currentStep: 1,
+            status: 'processing',
+            error: null,
+            transactionId: null,
+            payroll: {
+                netSalary: summary.totalNet,
+                earnings: { gross: summary.totalGross },
+                deductions: { total: summary.totalDeductions }
+            }
+        });
+
+        // Simulate bulk processing with faster steps
+        const steps = [
+            { delay: 400 },  // Calculate
+            { delay: 300 },  // Deductions
+            { delay: 600 },  // PDF generation for all
+            { delay: 500 },  // Upload all
+            { delay: 800 },  // Initiate bulk NEFT
+            { delay: 1000 }, // Bank batch processing
+            { delay: 600 },  // Confirmation
+            { delay: 400 }   // Email all
+        ];
+
+        try {
+            // Progress through steps
+            for (let i = 0; i < steps.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, steps[i].delay));
+                if (i < steps.length - 1) {
+                    setPaymentProgress(prev => ({ ...prev, currentStep: i + 2 }));
+                }
+            }
+
+            // Actual API call
+            await payAll(month);
+
+            // Success!
+            setPaymentProgress(prev => ({
+                ...prev,
+                currentStep: 9,
+                status: 'success',
+                transactionId: `BULK-TXN-${Date.now()}`
+            }));
+
+            // Close modal after 2 seconds
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+                refetch();
+            }, 2000);
+
+        } catch (error) {
             console.error('Bulk pay failed:', error);
+            setPaymentProgress(prev => ({
+                ...prev,
+                status: 'error',
+                error: 'Bulk payment processing failed'
+            }));
+
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+            }, 3000);
         }
     };
 
@@ -61,6 +173,21 @@ const PayrollDetail = () => {
         }
     };
 
+    const handleRevoke = async (payroll) => {
+        const employeeName = `${payroll.employeeId?.personalInfo?.firstName || ''} ${payroll.employeeId?.personalInfo?.lastName || ''}`;
+        const confirmed = await confirmRevoke(employeeName);
+
+        if (!confirmed) return;
+
+        try {
+            await revokePayroll(payroll._id);
+            message.success('Payroll approval revoked successfully');
+            refetch();
+        } catch (error) {
+            message.error(error.response?.data?.error?.message || 'Failed to revoke payroll');
+        }
+    };
+
     const handlePay = async (payroll) => {
         const employeeName = `${payroll.employeeId?.personalInfo?.firstName || ''} ${payroll.employeeId?.personalInfo?.lastName || ''}`;
         const amount = formatCurrency(payroll.netSalary);
@@ -68,12 +195,82 @@ const PayrollDetail = () => {
 
         if (!confirmed) return;
 
+        // Open progress modal
+        setPaymentProgress({
+            isOpen: true,
+            currentStep: 1, // Start at step 1 to show first animation
+            status: 'processing',
+            error: null,
+            transactionId: null,
+            payroll: payroll
+        });
+
+        // Simulate step progression with banking
+        const steps = [
+            { delay: 600 },  // Step 1: Calculate salary
+            { delay: 500 },  // Step 2: Apply deductions  
+            { delay: 1000 }, // Step 3: Generate PDF
+            { delay: 900 },  // Step 4: Upload
+            { delay: 1200 }, // Step 5: Initiate NEFT transfer
+            { delay: 1500 }, // Step 6: Bank processing
+            { delay: 800 },  // Step 7: Payment confirmed
+            { delay: 600 }   // Step 8: Send email
+        ];
+
+        let currentStepIndex = 0;
+
         try {
-            await markAsPaid(payroll._id);
-            message.success('Successfully marked as paid');
-            refetch();
+            // Progress through steps
+            for (let i = 0; i < steps.length; i++) {
+                currentStepIndex = i + 1;
+                setPaymentProgress(prev => ({ ...prev, currentStep: currentStepIndex }));
+                await new Promise(resolve => setTimeout(resolve, steps[i].delay));
+            }
+
+            // Actual API call (backend has its own delays)
+            const response = await markAsPaid(payroll._id);
+
+            // Success!
+            setPaymentProgress(prev => ({
+                ...prev,
+                currentStep: 9, // Changed from 6 to 9 (8 steps + success)
+                status: 'success',
+                transactionId: response.data.transactionId
+            }));
+
+            message.success('Payment processed successfully');
+
+            // Close modal after 3 seconds
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+                refetch();
+            }, 3000);
+
         } catch (error) {
-            message.error('Failed to mark as paid');
+            setPaymentProgress(prev => ({
+                ...prev,
+                status: 'error',
+                error: error.response?.data?.message || 'Payment processing failed'
+            }));
+
+            // Close modal after 4 seconds on error
+            setTimeout(() => {
+                setPaymentProgress({
+                    isOpen: false,
+                    currentStep: 0,
+                    status: 'idle',
+                    error: null,
+                    transactionId: null,
+                    payroll: null
+                });
+            }, 4000);
         }
     };
 
@@ -130,8 +327,8 @@ const PayrollDetail = () => {
         <PageContainer>
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Payroll: {formatMonth(month)}</h1>
-                    <p className="text-gray-600">Review payroll before approval and payment</p>
+                    <h1 className="text-2xl font-bold text-foreground">Payroll: {formatMonth(month)}</h1>
+                    <p className="text-muted-foreground">Review payroll before approval and payment</p>
                 </div>
                 <div className="flex gap-3">
                     {summary?.statusBreakdown?.pending > 0 && (
@@ -145,14 +342,24 @@ const PayrollDetail = () => {
                         </Button>
                     )}
                     {summary?.statusBreakdown?.approved > 0 && (
-                        <Button
-                            size="lg"
-                            onClick={handleBulkPay}
-                            disabled={bulkLoading}
-                            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                        >
-                            {bulkLoading ? 'Processing...' : `Pay All Approved (${summary.statusBreakdown.approved})`}
-                        </Button>
+                        <>
+                            <Button
+                                size="lg"
+                                onClick={handleBulkRevoke}
+                                disabled={bulkLoading}
+                                className="gap-2 bg-yellow-500 hover:bg-yellow-600 text-white"
+                            >
+                                {bulkLoading ? 'Processing...' : `Revoke All Approved (${summary.statusBreakdown.approved})`}
+                            </Button>
+                            <Button
+                                size="lg"
+                                onClick={handleBulkPay}
+                                disabled={bulkLoading}
+                                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                {bulkLoading ? 'Processing...' : `Pay All Approved (${summary.statusBreakdown.approved})`}
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -196,12 +403,12 @@ const PayrollDetail = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gross</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deductions</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid At</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Gross</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Deductions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Net</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Paid At</th>
                                     <th className="px-4 py-3"></th>
                                 </tr>
                             </thead>
@@ -216,6 +423,7 @@ const PayrollDetail = () => {
                                             setShowAdjustment(true);
                                         }}
                                         onApprove={handleApprove}
+                                        onRevoke={handleRevoke}
                                         onPay={handlePay}
                                         onResendEmail={handleResendEmail}
                                     />
@@ -230,7 +438,7 @@ const PayrollDetail = () => {
             {/* Salary Breakdown Modal */}
             {selected && !showAdjustment && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelected(null)}>
-                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>
@@ -259,7 +467,7 @@ const PayrollDetail = () => {
                     setShowAdjustment(false);
                     setAdjustmentForm({ type: 'Bonus', amount: 0, description: '' });
                 }}>
-                    <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-md bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>Add Adjustment</CardTitle>
@@ -332,6 +540,22 @@ const PayrollDetail = () => {
                     </Card>
                 </div>
             )}
+
+            {/* Payment Progress Modal */}
+            <PaymentProgressModal
+                isOpen={paymentProgress.isOpen}
+                employee={{
+                    name: `${paymentProgress.payroll?.employeeId?.personalInfo?.firstName || ''} ${paymentProgress.payroll?.employeeId?.personalInfo?.lastName || ''}`,
+                    email: paymentProgress.payroll?.employeeId?.personalInfo?.email
+                }}
+                payroll={paymentProgress.payroll}
+                currentStep={paymentProgress.currentStep}
+                status={paymentProgress.status}
+                error={paymentProgress.error}
+                transactionId={paymentProgress.transactionId}
+                isBulk={!paymentProgress.payroll?.employeeId}
+                employeeCount={summary?.totalEmployees || 0}
+            />
         </PageContainer>
     );
 };

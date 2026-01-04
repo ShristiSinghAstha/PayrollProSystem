@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { generatePayslipEmail, generateOTPEmail } from './emailTemplates.js';
+import dayjs from 'dayjs';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -50,47 +52,47 @@ export const sendPayslipEmail = async (employeeEmail, employeeName, payslipUrl, 
   }
 
   try {
-    const { month, netSalary } = payrollData;
+    const { month, netSalary, earnings, deductions, transactionId, paidAt, employeeId } = payrollData;
+
+    // Format month nicely (e.g., "2025-01" => "January 2025")
+    const formattedMonth = dayjs(month).format('MMMM YYYY');
+
+    // Format payment date
+    const formattedDate = dayjs(paidAt).format('DD MMM YYYY, hh:mm A');
+
+    // Get bank details
+    const bankName = employeeId?.bankDetails?.bankName || 'Bank';
+    const accountNumber = employeeId?.bankDetails?.accountNumber
+      ? employeeId.bankDetails.accountNumber.slice(-4)
+      : '****';
+
+    // Calculate totals
+    const grossSalary = earnings?.gross || 0;
+    const totalDeductions = deductions?.total || 0;
+
+    // Generate professional HTML email
+    const htmlContent = generatePayslipEmail({
+      employeeName,
+      employeeId: employeeId?.employeeId || 'N/A',
+      month: formattedMonth,
+      netSalary,
+      grossSalary,
+      deductions: totalDeductions,
+      transactionId: transactionId || 'N/A',
+      paidDate: formattedDate,
+      payslipUrl,
+      bankName,
+      accountNumber
+    });
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@payrollpro.com',
+      from: {
+        name: 'PayrollPro',
+        address: process.env.EMAIL_FROM || 'noreply@payrollpro.com'
+      },
       to: employeeEmail,
-      subject: `Payslip for ${month} - PayrollPro`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4F46E5;">Your Payslip is Ready!</h2>
-          
-          <p>Dear ${employeeName},</p>
-          
-          <p>Your salary for <strong>${month}</strong> has been processed successfully.</p>
-          
-          <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #1F2937;">Payment Summary</h3>
-            <p style="font-size: 24px; color: #059669; font-weight: bold; margin: 10px 0;">
-              ${formatCurrency(netSalary)}
-            </p>
-            <p style="color: #6B7280; font-size: 14px;">Net Salary Credited</p>
-          </div>
-          
-          <p>You can download your detailed payslip using the link below:</p>
-          
-          <a href="${payslipUrl}" 
-             style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; 
-                    text-decoration: none; border-radius: 6px; margin: 20px 0;">
-            Download Payslip
-          </a>
-          
-          <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
-            If you have any questions about your payslip, please contact the HR department.
-          </p>
-          
-          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
-          
-          <p style="color: #9CA3AF; font-size: 12px;">
-            This is an automated email from PayrollPro. Please do not reply to this email.
-          </p>
-        </div>
-      `
+      subject: `Salary Processed for ${formattedMonth} 💰`,
+      html: htmlContent
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -222,6 +224,40 @@ export const sendPasswordResetEmail = async (employeeEmail, data) => {
       success: false,
       error: error.message
     };
+  }
+};
+
+/**
+ * Send OTP email
+ */
+export const sendOTPEmail = async (email, otp, userName) => {
+  if (!email || !validateEmail(email)) {
+    throw new Error('Invalid email address');
+  }
+
+  if (!otp) {
+    throw new Error('OTP is required');
+  }
+
+  const htmlContent = generateOTPEmail(otp, userName);
+
+  const mailOptions = {
+    from: `"PayrollPro" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'Your Login OTP - PayrollPro',
+    html: htmlContent
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP email sent successfully to ${email}`);
+    return {
+      success: true,
+      messageId: info.messageId
+    };
+  } catch (error) {
+    console.error('❌ Failed to send OTP email:', error);
+    throw new Error(`Failed to send OTP email: ${error.message}`);
   }
 };
 

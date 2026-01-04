@@ -6,7 +6,8 @@ import {
     updateEmployee,
     deactivateEmployee,
     getEmployeeStats,
-    getEmployeeDashboard
+    getEmployeeDashboard,
+    getEmployeeGrowth
 } from '../controllers/employeeController.js';
 import { employeeValidation } from '../middlewares/validator.js';
 import { protect, restrictTo } from '../middlewares/auth.js';
@@ -22,9 +23,10 @@ router.get('/dashboard', getEmployeeDashboard);
 router.use(restrictTo('admin'));
 
 router.get('/stats', getEmployeeStats);
+router.get('/growth', getEmployeeGrowth);
 router.post('/', employeeValidation.create, createEmployee);
 router.get('/', getAllEmployees);
-router.get('/:id', employeeValidation.getById, getEmployeeById);    
+router.get('/:id', employeeValidation.getById, getEmployeeById);
 router.put('/:id', employeeValidation.update, updateEmployee);
 router.delete('/:id', employeeValidation.getById, deactivateEmployee);
 

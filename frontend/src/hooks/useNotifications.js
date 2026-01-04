@@ -1,8 +1,7 @@
-// websockets will make this feature more interesting... let's see... will come back !!!
-
 import { useState, useEffect } from 'react';
 import { getMyNotifications, getUnreadCount } from '@/api/notificationApi';
 import { message } from 'antd';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useNotifications = (filters = {}) => {
   const [notifications, setNotifications] = useState([]);
@@ -41,8 +40,14 @@ export const useNotifications = (filters = {}) => {
 };
 
 export const useUnreadCount = () => {
+  const { isAdmin } = useAuth();
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Admin users don't have DB notifications
+  if (isAdmin) {
+    return { count: 0, loading: false, refetch: () => { } };
+  }
 
   const fetchCount = async () => {
     try {

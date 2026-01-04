@@ -148,7 +148,7 @@ const MyLeaves = () => {
             'Approved': 'inline-flex items-center rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700',
             'Rejected': 'inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700'
         };
-        return badges[status] || 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700';
+        return badges[status] || 'inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground';
     };
 
     const getLeaveTypeBadge = (type) => {
@@ -156,9 +156,9 @@ const MyLeaves = () => {
             'Casual': 'inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700',
             'Sick': 'inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700',
             'Earned': 'inline-flex items-center rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700',
-            'LOP': 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700'
+            'LOP': 'inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground'
         };
-        return badges[type] || 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700';
+        return badges[type] || 'inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground';
     };
 
     const getLeaveStatus = (startDate, endDate) => {
@@ -179,7 +179,7 @@ const MyLeaves = () => {
         const badges = {
             'Upcoming': 'inline-flex items-center rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700',
             'Active': 'inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700',
-            'Completed': 'inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600'
+            'Completed': 'inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground'
         };
         return badges[status] || '';
     };
@@ -260,15 +260,15 @@ const MyLeaves = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leave Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applied On</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Leave Type</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Duration</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Reason</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Applied On</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="bg-card divide-y divide-border">
                                 {leaves.map((leave) => (
                                     <tr key={leave._id} className="hover:bg-gray-50">
                                         <td className="px-4 py-4">
@@ -278,15 +278,15 @@ const MyLeaves = () => {
                                         </td>
                                         <td className="px-4 py-4">
                                             <div>
-                                                <p className="text-sm text-gray-900">{formatDate(leave.startDate)} → {formatDate(leave.endDate)}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="text-sm text-foreground">{formatDate(leave.startDate)} → {formatDate(leave.endDate)}</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
                                                     <Calendar className="h-3 w-3 inline mr-1" />
                                                     {leave.totalDays} {leave.totalDays > 1 ? 'days' : 'day'}
                                                 </p>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 max-w-xs">
-                                            <p className="text-sm text-gray-600 truncate">{leave.reason}</p>
+                                            <p className="text-sm text-muted-foreground truncate">{leave.reason}</p>
                                         </td>
                                         <td className="px-4 py-4">
                                             <span className={getStatusBadge(leave.status)}>
@@ -297,7 +297,7 @@ const MyLeaves = () => {
                                             </span>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <p className="text-sm text-gray-600">{dayjs(leave.createdAt).format('DD MMM YYYY')}</p>
+                                            <p className="text-sm text-muted-foreground">{dayjs(leave.createdAt).format('DD MMM YYYY')}</p>
                                         </td>
                                         <td className="px-4 py-4">
                                             {leave.status === 'Pending' && (
@@ -328,8 +328,8 @@ const MyLeaves = () => {
                         {/* Empty State */}
                         {leaves.length === 0 && !loading && (
                             <div className="text-center py-12">
-                                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600">No leave applications yet</p>
+                                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                <p className="text-muted-foreground">No leave applications yet</p>
                                 <Button className="mt-4 gap-2" onClick={() => setShowApplyModal(true)}>
                                     <Plus className="h-4 w-4" />
                                     Apply for Your First Leave
@@ -343,7 +343,7 @@ const MyLeaves = () => {
             {/* Apply Leave Modal */}
             {showApplyModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowApplyModal(false)}>
-                    <Card className="w-full max-w-md bg-white border-2" onClick={(e) => e.stopPropagation()}>
+                    <Card className="w-full max-w-md bg-card border-2" onClick={(e) => e.stopPropagation()}>
                         <CardHeader className="border-b">
                             <div className="flex items-center justify-between">
                                 <CardTitle>Apply for Leave</CardTitle>
@@ -429,7 +429,7 @@ const MyLeaves = () => {
                                 <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
                                 <div>
                                     <p className="font-medium text-sm">Are you sure you want to delete this leave application?</p>
-                                    <p className="text-sm text-gray-600 mt-2">This action cannot be undone.</p>
+                                    <p className="text-sm text-muted-foreground mt-2">This action cannot be undone.</p>
                                 </div>
                             </div>
                             <div className="flex gap-2 justify-end pt-4">

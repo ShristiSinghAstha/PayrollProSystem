@@ -7,7 +7,8 @@ import {
     approveLeave,
     rejectLeave,
     deleteLeave,
-    getLeaveStats
+    getLeaveStats,
+    getLeaveUtilization
 } from '../controllers/leaveController.js';
 import { protect, restrictTo } from '../middlewares/auth.js';
 
@@ -25,6 +26,7 @@ router.delete('/:id', deleteLeave);
 // Admin routes
 router.get('/', restrictTo('admin'), getAllLeaves);
 router.get('/stats', restrictTo('admin'), getLeaveStats);
+router.get('/utilization', restrictTo('admin'), getLeaveUtilization);
 router.get('/balance/:employeeId', restrictTo('admin'), getLeaveBalance);
 router.patch('/:id/approve', restrictTo('admin'), approveLeave);
 router.patch('/:id/reject', restrictTo('admin'), rejectLeave);

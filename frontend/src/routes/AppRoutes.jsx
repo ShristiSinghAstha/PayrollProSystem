@@ -17,7 +17,11 @@ import Reports from '@/pages/admin/Reports';
 import Profile from '@/pages/employee/Profile';
 import LeaveApprovals from '@/pages/admin/LeaveApprovals';
 import MyLeaves from '@/pages/employee/MyLeaves';
+import MyAttendance from '@/pages/employee/MyAttendance';
+import TaxDeclarations from '@/pages/employee/TaxDeclarations';
+// import MyReviews from '@/pages/employee/MyReviews';
 import AdminSettings from '@/pages/admin/Settings';
+// import PerformanceReviews from '@/pages/admin/PerformanceReviews';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 
@@ -62,6 +66,7 @@ const AppRoutes = () => {
         <Route path="payroll/:month" element={<PayrollDetail />} />
         <Route path="reports" element={<Reports />} />
         <Route path="leaves" element={<LeaveApprovals />} />
+        {/* <Route path="reviews" element={<PerformanceReviews />} /> */}
         <Route path="settings" element={<AdminSettings />} />
       </Route>
 
@@ -77,6 +82,9 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<EmployeeDashboard />} />
         <Route path="payslips" element={<Payslips />} />
         <Route path="leaves" element={<MyLeaves />} />
+        <Route path="attendance" element={<MyAttendance />} />
+        <Route path="tax-declarations" element={<TaxDeclarations />} />
+        {/* <Route path="reviews" element={<MyReviews />} /> */}
         <Route path="notifications" element={<Notifications />} />
         <Route path="profile" element={<Profile />} />
       </Route>

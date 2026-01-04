@@ -9,6 +9,7 @@ import { getMyNotifications, markAsRead } from '@/api/notificationApi';
 import { notification as antNotification } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import ThemeToggle from '../common/ThemeToggle';
 
 dayjs.extend(relativeTime);
 
@@ -152,109 +153,114 @@ const TopBar = ({ title }) => {
   };
 
   return (
-    <header className="h-16 bg-white border-b fixed top-0 right-0 left-64 z-10 shadow-sm">
+    <header className="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 fixed top-0 right-0 left-64 z-10 shadow-sm">
       <div className="h-full px-6 flex items-center justify-between">
         {/* Page Title */}
-        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        <h2 className="text-xl font-semibold text-foreground dark:text-gray-100">{title}</h2>
 
         {/* Right Side */}
         <div className="flex items-center gap-4">
-          {/* Notifications Dropdown */}
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => setShowNotifications(!showNotifications)}
-            >
-              <Bell className="h-5 w-5" />
-              {/* Badge for unread count - LIVE UPDATES */}
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold animate-pulse">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </Button>
+          {/* Notifications Dropdown - EMPLOYEE ONLY */}
+          {!user?.isAdmin && user?.role !== 'admin' && (
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                <Bell className="h-5 w-5" />
+                {/* Badge for unread count - LIVE UPDATES */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Button>
 
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowNotifications(false)}
-                />
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border-2 border-gray-200 z-20 max-h-[500px] overflow-hidden flex flex-col">
-                  {/* Header */}
-                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">
-                          {unreadCount} unread
-                        </span>
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowNotifications(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border-2 border-gray-200 z-20 max-h-[500px] overflow-hidden flex flex-col">
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">
+                            {unreadCount} unread
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notification List */}
+                    <div className="overflow-y-auto flex-1">
+                      {loadingNotifs ? (
+                        <div className="p-8 text-center text-gray-500">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                          <p className="mt-2 text-sm">Loading...</p>
+                        </div>
+                      ) : recentNotifications.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400">
+                          <Bell className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm font-medium">No notifications</p>
+                          <p className="text-xs mt-1">You're all caught up!</p>
+                        </div>
+                      ) : (
+                        recentNotifications.map((notif) => (
+                          <button
+                            key={notif._id}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`w-full px-4 py-3 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors ${!notif.isRead ? 'bg-blue-50' : ''
+                              }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-1 ${!notif.isRead ? 'text-blue-600' : 'text-gray-400'}`}>
+                                {getNotificationIcon(notif.type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${!notif.isRead ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                  {notif.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {dayjs(notif.createdAt).fromNow()}
+                                </p>
+                              </div>
+                              {!notif.isRead && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                              )}
+                            </div>
+                          </button>
+                        ))
                       )}
                     </div>
-                  </div>
 
-                  {/* Notification List */}
-                  <div className="overflow-y-auto flex-1">
-                    {loadingNotifs ? (
-                      <div className="p-8 text-center text-gray-500">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                        <p className="mt-2 text-sm">Loading...</p>
-                      </div>
-                    ) : recentNotifications.length === 0 ? (
-                      <div className="p-8 text-center text-gray-400">
-                        <Bell className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm font-medium">No notifications</p>
-                        <p className="text-xs mt-1">You're all caught up!</p>
-                      </div>
-                    ) : (
-                      recentNotifications.map((notif) => (
-                        <button
-                          key={notif._id}
-                          onClick={() => handleNotificationClick(notif)}
-                          className={`w-full px-4 py-3 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors ${!notif.isRead ? 'bg-blue-50' : ''
-                            }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`mt-1 ${!notif.isRead ? 'text-blue-600' : 'text-gray-400'}`}>
-                              {getNotificationIcon(notif.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm ${!notif.isRead ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-                                {notif.message}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                {dayjs(notif.createdAt).fromNow()}
-                              </p>
-                            </div>
-                            {!notif.isRead && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                            )}
-                          </div>
-                        </button>
-                      ))
-                    )}
+                    {/* Footer */}
+                    <div className="border-t border-gray-200 bg-gray-50">
+                      <button
+                        onClick={() => {
+                          setShowNotifications(false);
+                          navigate('/employee/notifications');
+                        }}
+                        className="w-full px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center justify-center gap-2 transition-colors"
+                      >
+                        View All Notifications
+                        <ExternalLink className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
+                </>
+              )}
+            </div>
+          )}
 
-                  {/* Footer */}
-                  <div className="border-t border-gray-200 bg-gray-50">
-                    <button
-                      onClick={() => {
-                        setShowNotifications(false);
-                        navigate('/employee/notifications');
-                      }}
-                      className="w-full px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center justify-center gap-2 transition-colors"
-                    >
-                      View All Notifications
-                      <ExternalLink className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* User Menu */}
           <div className="relative">

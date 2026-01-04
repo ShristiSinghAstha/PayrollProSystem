@@ -2,7 +2,12 @@ import Leave from '../models/Leave.js';
 import Employee from '../models/Employee.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { emitToUser, emitToAdmins } from '../config/socket.js';
-import { notifyAdminsNewLeave, notifyAdminsLeaveDecision } from '../utils/notificationService.js';
+import {
+    notifyAdminsNewLeave,
+    notifyAdminsLeaveDecision,
+    createLeaveApprovedNotification,
+    createLeaveRejectedNotification
+} from '../utils/notificationService.js';
 
 // Apply for leave (Employee)
 export const applyLeave = asyncHandler(async (req, res) => {
@@ -171,6 +176,15 @@ export const approveLeave = asyncHandler(async (req, res) => {
     leave.approve(req.user._id, remarks);
     await leave.save();
 
+    // Create employee notification (DB + real-time)
+    await createLeaveApprovedNotification(leave.employeeId._id, {
+        leaveType: leave.leaveType,
+        startDate: leave.startDate.toLocaleDateString('en-IN'),
+        endDate: leave.endDate.toLocaleDateString('en-IN'),
+        totalDays: leave.totalDays,
+        remarks: remarks
+    });
+
     // Emit socket events
     emitToUser(leave.employeeId._id, 'leave:approved', {
         message: `Your leave application has been approved${remarks ? ': ' + remarks : ''}`,
@@ -220,6 +234,13 @@ export const rejectLeave = asyncHandler(async (req, res) => {
 
     leave.reject(req.user._id, reason);
     await leave.save();
+
+    // Create employee notification (DB + real-time)
+    await createLeaveRejectedNotification(leave.employeeId._id, {
+        leaveType: leave.leaveType,
+        totalDays: leave.totalDays,
+        rejectionReason: reason
+    });
 
     // Emit socket events
     emitToUser(leave.employeeId._id, 'leave:rejected', {
@@ -338,3 +359,39 @@ export const getLeaveStats = asyncHandler(async (req, res) => {
         data: result
     });
 });
+
+// Get leave utilization (Admin)
+export const getLeaveUtilization = asyncHandler(async (req, res) => {
+    const { year = new Date().getFullYear() } = req.query;
+
+    const utilization = await Leave.aggregate([
+        {
+            $match: {
+                status: 'Approved',
+                startDate: {
+                    $gte: new Date(`${year}-01-01`),
+                    $lte: new Date(`${year}-12-31`)
+                }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    month: { $month: '$startDate' },
+                    type: '$leaveType'
+                },
+                totalDays: { $sum: '$totalDays' },
+                count: { $sum: 1 }
+            }
+        },
+        {
+            $sort: { '_id.month': 1 }
+        }
+    ]);
+
+    res.json({
+        success: true,
+        data: utilization
+    });
+});
+

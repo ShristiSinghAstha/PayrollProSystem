@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
-const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onPay, onResendEmail }) => {
+const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onRevoke, onPay, onResendEmail }) => {
     const statusVariant = {
         Pending: 'warning',
         Approved: 'info',
@@ -53,6 +53,16 @@ const PayrollRow = ({ payroll, onViewBreakdown, onAddAdjustment, onApprove, onPa
                     {onApprove && payroll.status === 'Pending' && (
                         <Button size="sm" onClick={() => onApprove(payroll)}>
                             Approve
+                        </Button>
+                    )}
+                    {onRevoke && payroll.status === 'Approved' && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onRevoke(payroll)}
+                            className="border-yellow-300 text-yellow-600 hover:bg-yellow-50"
+                        >
+                            Revoke
                         </Button>
                     )}
                     {onPay && payroll.status === 'Approved' && (

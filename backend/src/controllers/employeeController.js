@@ -64,7 +64,6 @@ export const createEmployee = asyncHandler(async (req, res) => {
     ).then((result) => {
         if (!result.success) {
             console.warn(`⚠️ Welcome email failed for ${personalInfo.email}:`, result.error);
-            // Optionally: Store notification in DB for admin
         }
     }).catch(console.error);
 });
@@ -303,5 +302,44 @@ export const getEmployeeDashboard = asyncHandler(async (req, res) => {
             upcomingLeaves,
             recentNotifications
         }
+    });
+});
+
+// Get employee growth over time (Admin)
+export const getEmployeeGrowth = asyncHandler(async (req, res) => {
+    const { months = 12 } = req.query;
+
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - parseInt(months));
+
+    const growth = await Employee.aggregate([
+        {
+            $match: {
+                createdAt: { $gte: startDate }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    year: { $year: '$createdAt' },
+                    month: { $month: '$createdAt' }
+                },
+                count: { $sum: 1 }
+            }
+        },
+        {
+            $sort: { '_id.year': 1, '_id.month': 1 }
+        }
+    ]);
+
+    // Format for chart display
+    const formattedGrowth = growth.map(item => ({
+        month: `${item._id.year}-${String(item._id.month).padStart(2, '0')}`,
+        count: item.count
+    }));
+
+    res.status(200).json({
+        success: true,
+        data: formattedGrowth
     });
 });

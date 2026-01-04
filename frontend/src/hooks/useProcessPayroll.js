@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { processMonthlyPayroll, bulkApprove, bulkPayAndGeneratePayslips } from '@/api/payrollApi';
+import { processMonthlyPayroll, bulkApprove, bulkRevoke, bulkPayAndGeneratePayslips } from '@/api/payrollApi';
 import { message } from 'antd';
 
 export const useProcessPayroll = () => {
@@ -67,5 +67,22 @@ export const useProcessPayroll = () => {
         }
     };
 
-    return { process, approveAll, payAll, loading, error };
+    const revokeAll = async (month) => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await bulkRevoke(month);
+            message.success('All approvals revoked');
+            return response.data;
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || 'Failed to revoke approvals';
+            setError(errorMsg);
+            message.error(errorMsg);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { process, approveAll, revokeAll, payAll, loading, error };
 };
